@@ -1,4 +1,4 @@
-crewai>=0.86.0
+crewai[google-genai]>=0.86.0
 crewai-tools>=0.25.0
 litellm
 python-dotenv>=1.0.1
