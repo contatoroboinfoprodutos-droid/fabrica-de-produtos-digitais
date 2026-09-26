@@ -25,9 +25,9 @@ jobs:
 
     - name: Executar a Fabrica de Infoprodutos (gera + publica)
       env:
-        # Groq (LLM dos agentes)
-        GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-        MODEL: ${{ secrets.MODEL }} # opcional; default = groq/openai/gpt-oss-120b
+        # Google Gemini (LLM dos agentes via LiteLLM)
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        MODEL: "gemini/gemini-1.5-flash"
 
         # Entrada da campanha (sem isso, roda com os defaults do config.py)
         PRODUTO_TOPICO: ${{ secrets.PRODUTO_TOPICO }}
