@@ -1,130 +1,73 @@
-"""
-Monta o Crew da Infoproduct Factory a partir de config/agents.yaml e
-config/tasks.yaml (padrão @CrewBase do CrewAI) — integrando com o Groq
-e gerenciando os limites de TPM (Rate Limit).
-"""
+import os
+import re
 import time
-from crewai import LLM, Agent, Crew, Process, Task
-from crewai.project import CrewBase, agent, crew, task
+import logging
+import litellm
+from crewai import Agent, Crew, Process, Task
+from crewai import LLM
 
-from config import get_settings
-from tools.crewai_meta_tools import PublishToFacebookTool, PublishToInstagramTool
+logger = logging.getLogger(__name__)
 
-
-# Função de pausa entre tarefas para respeitar o limite de tokens por minuto (TPM) da Groq
-def _aguardar_reset_rate_limit(output):
-    time.sleep(20)  # Pausa de 20 segundos entre tarefas para resetar a janela de TPM
-
-
-def get_llm() -> LLM:
-    settings = get_settings()
-    return LLM(
-        model=settings.model,
-        api_key=settings.groq_api_key,
-        temperature=0.7,
-        # Retry automático caso ocorra RateLimitError temporário
-        num_retries=5,
-    )
+# --- Camada 1: retry nativo do LiteLLM como rede de segurança global ---
+# Isso faz o litellm tentar novamente automaticamente em erros transitórios
+# (rate limit, timeout, erro 5xx) antes mesmo de chegar no seu código.
+litellm.num_retries = 5
+litellm.request_timeout = 120
 
 
-@CrewBase
-class InfoprodutoFactoryCrew:
-    """Crew completo: estratégia -> roteiro -> visual -> segmentação -> publicação."""
+class GroqRateLimitAwareLLM(LLM):
+    """
+    Subclasse de crewai.LLM que intercepta RateLimitError da Groq,
+    extrai o tempo de espera exato sugerido pela API ("try again in Xs")
+    e aguarda antes de tentar novamente — em vez de um backoff genérico.
+    """
 
-    agents_config = "config/agents.yaml"
-    tasks_config = "config/tasks.yaml"
+    MAX_ATTEMPTS = 6
+    FALLBACK_BASE_DELAY = 8  # segundos, usado se não conseguir parsear a mensagem
 
-    # -- Agentes -------------------------------------------------------- #
-    @agent
-    def conteudo_estrategista(self) -> Agent:
-        return Agent(
-            config=self.agents_config["conteudo_estrategista"],
-            llm=get_llm(),
-            verbose=True,
-            allow_delegation=False,
-            cache=False,
-        )
+    def call(self, *args, **kwargs):
+        for attempt in range(1, self.MAX_ATTEMPTS + 1):
+            try:
+                return super().call(*args, **kwargs)
+            except litellm.exceptions.RateLimitError as e:
+                wait_time = self._extract_wait_time(str(e))
+                if wait_time is None:
+                    # backoff exponencial com jitter como fallback
+                    wait_time = self.FALLBACK_BASE_DELAY * (2 ** (attempt - 1))
 
-    @agent
-    def redator_senior(self) -> Agent:
-        return Agent(
-            config=self.agents_config["redator_senior"],
-            llm=get_llm(),
-            verbose=True,
-            allow_delegation=False,
-            cache=False,
-        )
+                logger.warning(
+                    "[Groq RateLimit] Tentativa %d/%d — aguardando %.1fs antes de retomar.",
+                    attempt, self.MAX_ATTEMPTS, wait_time,
+                )
+                time.sleep(wait_time + 0.5)  # pequena margem de segurança
 
-    @agent
-    def diretor_criativo(self) -> Agent:
-        return Agent(
-            config=self.agents_config["diretor_criativo"],
-            llm=get_llm(),
-            verbose=True,
-            allow_delegation=False,
-            cache=False,
-        )
+                if attempt == self.MAX_ATTEMPTS:
+                    logger.error("Rate limit da Groq persistiu após %d tentativas.", attempt)
+                    raise
+        raise RuntimeError("Não foi possível completar a chamada à Groq.")
 
-    @agent
-    def segmentador_publicos(self) -> Agent:
-        return Agent(
-            config=self.agents_config["segmentador_publicos"],
-            llm=get_llm(),
-            verbose=True,
-            allow_delegation=False,
-            cache=False,
-        )
+    @staticmethod
+    def _extract_wait_time(error_message: str) -> float | None:
+        match = re.search(r"try again in ([\d.]+)s", error_message)
+        return float(match.group(1)) if match else None
 
-    @agent
-    def publicador_redes(self) -> Agent:
-        return Agent(
-            config=self.agents_config["publicador_redes"],
-            llm=get_llm(),
-            tools=[PublishToFacebookTool(), PublishToInstagramTool()],
-            verbose=True,
-            allow_delegation=False,
-            cache=False,
-        )
 
-    # -- Tasks ------------------------------------------------------------ #
-    @task
-    def planejar_campanha(self) -> Task:
-        return Task(
-            config=self.tasks_config["planejar_campanha"],
-            callback=_aguardar_reset_rate_limit,
-        )
+# --- Instanciação do LLM ---
+groq_llm = GroqRateLimitAwareLLM(
+    model="groq/openai/gpt-oss-120b",
+    api_key=os.environ["GROQ_API_KEY"],
+    temperature=0.3,
+    max_tokens=1024,       # <- crítico: corta o "Requested" por chamada
+)
 
-    @task
-    def criar_roteiro_e_legenda(self) -> Task:
-        return Task(
-            config=self.tasks_config["criar_roteiro_e_legenda"],
-            callback=_aguardar_reset_rate_limit,
-        )
-
-    @task
-    def desenvolver_diretrizes_visuais(self) -> Task:
-        return Task(
-            config=self.tasks_config["desenvolver_diretrizes_visuais"],
-            callback=_aguardar_reset_rate_limit,
-        )
-
-    @task
-    def direcionar_para_grupos(self) -> Task:
-        return Task(
-            config=self.tasks_config["direcionar_para_grupos"],
-            callback=_aguardar_reset_rate_limit,
-        )
-
-    @task
-    def publicar_no_facebook_e_instagram(self) -> Task:
-        return Task(config=self.tasks_config["publicar_no_facebook_e_instagram"])
-
-    # -- Crew ------------------------------------------------------------- #
-    @crew
-    def crew(self) -> Crew:
-        return Crew(
-            agents=self.agents,
-            tasks=self.tasks,
-            process=Process.sequential,
-            verbose=True,
-        )
+# --- Camada 3: throttle no nível do Crew ---
+# max_rpm limita requisições/minuto para toda a crew (sobrepõe o dos agentes),
+# dando tempo para a janela de TPM da Groq "esvaziar" entre chamadas.
+crew = Crew(
+    agents=[...],   # seus agentes, cada um usando llm=groq_llm
+    tasks=[...],
+    process=Process.sequential,
+    max_rpm=6,        # ajuste conforme o tamanho médio dos seus prompts
+    cache=True,       # evita reprocessar chamadas idênticas
+    verbose=True,
+)
