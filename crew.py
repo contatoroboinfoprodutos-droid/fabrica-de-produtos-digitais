@@ -1,12 +1,19 @@
 """
 Monta o Crew da Infoproduct Factory a partir de config/agents.yaml e
-config/tasks.yaml (padrão @CrewBase do CrewAI) — integrando com o Groq.
+config/tasks.yaml (padrão @CrewBase do CrewAI) — integrando com o Groq
+e gerenciando os limites de TPM (Rate Limit).
 """
+import time
 from crewai import LLM, Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 
 from config import get_settings
 from tools.crewai_meta_tools import PublishToFacebookTool, PublishToInstagramTool
+
+
+# Função de pausa entre tarefas para respeitar o limite de tokens por minuto (TPM) da Groq
+def _aguardar_reset_rate_limit(output):
+    time.sleep(20)  # Pausa de 20 segundos entre tarefas para resetar a janela de TPM
 
 
 def get_llm() -> LLM:
@@ -15,6 +22,8 @@ def get_llm() -> LLM:
         model=settings.model,
         api_key=settings.groq_api_key,
         temperature=0.7,
+        # Retry automático caso ocorra RateLimitError temporário
+        num_retries=5,
     )
 
 
@@ -33,6 +42,7 @@ class InfoprodutoFactoryCrew:
             llm=get_llm(),
             verbose=True,
             allow_delegation=False,
+            cache=False,
         )
 
     @agent
@@ -42,6 +52,7 @@ class InfoprodutoFactoryCrew:
             llm=get_llm(),
             verbose=True,
             allow_delegation=False,
+            cache=False,
         )
 
     @agent
@@ -51,6 +62,7 @@ class InfoprodutoFactoryCrew:
             llm=get_llm(),
             verbose=True,
             allow_delegation=False,
+            cache=False,
         )
 
     @agent
@@ -60,6 +72,7 @@ class InfoprodutoFactoryCrew:
             llm=get_llm(),
             verbose=True,
             allow_delegation=False,
+            cache=False,
         )
 
     @agent
@@ -70,24 +83,37 @@ class InfoprodutoFactoryCrew:
             tools=[PublishToFacebookTool(), PublishToInstagramTool()],
             verbose=True,
             allow_delegation=False,
+            cache=False,
         )
 
     # -- Tasks ------------------------------------------------------------ #
     @task
     def planejar_campanha(self) -> Task:
-        return Task(config=self.tasks_config["planejar_campanha"])
+        return Task(
+            config=self.tasks_config["planejar_campanha"],
+            callback=_aguardar_reset_rate_limit,
+        )
 
     @task
     def criar_roteiro_e_legenda(self) -> Task:
-        return Task(config=self.tasks_config["criar_roteiro_e_legenda"])
+        return Task(
+            config=self.tasks_config["criar_roteiro_e_legenda"],
+            callback=_aguardar_reset_rate_limit,
+        )
 
     @task
     def desenvolver_diretrizes_visuais(self) -> Task:
-        return Task(config=self.tasks_config["desenvolver_diretrizes_visuais"])
+        return Task(
+            config=self.tasks_config["desenvolver_diretrizes_visuais"],
+            callback=_aguardar_reset_rate_limit,
+        )
 
     @task
     def direcionar_para_grupos(self) -> Task:
-        return Task(config=self.tasks_config["direcionar_para_grupos"])
+        return Task(
+            config=self.tasks_config["direcionar_para_grupos"],
+            callback=_aguardar_reset_rate_limit,
+        )
 
     @task
     def publicar_no_facebook_e_instagram(self) -> Task:
