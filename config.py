@@ -1,79 +1,105 @@
 """
-Configuração central do projeto Infoproduct Factory.
-
-Carrega e valida as variáveis de ambiente (.env em local, Secrets no GitHub
-Actions) usando pydantic-settings.
-
-Modificado para utilizar o Google Gemini via LiteLLM como padrão.
+Monta o Crew da Infoproduct Factory a partir de config/agents.yaml e
+config/tasks.yaml (padrão @CrewBase do CrewAI) — integrando com o Google Gemini via LiteLLM.
 """
-from functools import lru_cache
-from typing import Optional
+from crewai import LLM, Agent, Crew, Process, Task
+from crewai.project import CrewBase, agent, crew, task
 
-from pydantic import Field, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from config import get_settings
+from tools.crewai_meta_tools import PublishToFacebookTool, PublishToInstagramTool
 
 
-class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
-
-    # --- LLM / Google Gemini ---
-    gemini_api_key: str = Field(..., alias="GEMINI_API_KEY")
-    model: str = Field("gemini/gemini-1.5-flash", alias="MODEL")
-
-    # --- Meta / Graph API (opcionais — publicação é pulada com aviso se ausentes) ---
-    meta_app_id: Optional[str] = Field(None, alias="META_APP_ID")
-    meta_app_secret: Optional[str] = Field(None, alias="META_APP_SECRET")
-    meta_long_lived_token: Optional[str] = Field(None, alias="META_LONG_LIVED_TOKEN")
-    meta_graph_api_version: str = Field("v26.0", alias="META_GRAPH_API_VERSION")
-
-    fb_page_id: Optional[str] = Field(None, alias="FB_PAGE_ID")
-    instagram_account_id: Optional[str] = Field(None, alias="INSTAGRAM_ACCOUNT_ID")
-    business_portfolio_id: Optional[str] = Field(None, alias="BUSINESS_PORTFOLIO_ID")
-
-    dry_run: bool = Field(False, alias="DRY_RUN")
-
-    # --- Entradas da campanha ---
-    produto_topico: str = Field(
-        "Produto em destaque do catálogo desta semana", alias="PRODUTO_TOPICO"
+def get_llm() -> LLM:
+    settings = get_settings()
+    return LLM(
+        model=settings.model,
+        api_key=settings.gemini_api_key,
+        temperature=0.7,
+        provider="litellm",  # Força o uso do LiteLLM para o Gemini, evitando dependências extras
     )
-    imagem_padrao_url: Optional[str] = Field(None, alias="IMAGEM_PADRAO_URL")
-
-    @field_validator("model", mode="before")
-    @classmethod
-    def _default_se_vazio_model(cls, v):
-        return v if v and str(v).strip() else "gemini/gemini-1.5-flash"
-
-    @field_validator("produto_topico", mode="before")
-    @classmethod
-    def _default_se_vazio_topico(cls, v):
-        return v if v and str(v).strip() else "Produto em destaque do catálogo desta semana"
-
-    @field_validator(
-        "imagem_padrao_url",
-        "meta_app_id",
-        "meta_app_secret",
-        "meta_long_lived_token",
-        "fb_page_id",
-        "instagram_account_id",
-        "business_portfolio_id",
-        mode="before",
-    )
-    @classmethod
-    def _vazio_vira_none(cls, v):
-        if isinstance(v, str) and v.strip() == "":
-            return None
-        return v
-
-    @property
-    def graph_base_url(self) -> str:
-        return f"https://graph.facebook.com/{self.meta_graph_api_version}"
-
-    @property
-    def meta_configurada(self) -> bool:
-        return bool(self.meta_long_lived_token and self.fb_page_id and self.instagram_account_id)
 
 
-@lru_cache
-def get_settings() -> "Settings":
-    """Retorna uma instância cacheada das settings (singleton por processo)."""
-    return Settings()
+@CrewBase
+class InfoprodutoFactoryCrew:
+    """Crew completo: estratégia -> roteiro -> visual -> segmentação -> publicação."""
+
+    agents_config = "config/agents.yaml"
+    tasks_config = "config/tasks.yaml"
+
+    # -- Agentes -------------------------------------------------------- #
+    @agent
+    def conteudo_estrategista(self) -> Agent:
+        return Agent(
+            config=self.agents_config["conteudo_estrategista"],
+            llm=get_llm(),
+            verbose=True,
+            allow_delegation=False,
+        )
+
+    @agent
+    def redator_senior(self) -> Agent:
+        return Agent(
+            config=self.agents_config["redator_senior"],
+            llm=get_llm(),
+            verbose=True,
+            allow_delegation=False,
+        )
+
+    @agent
+    def diretor_criativo(self) -> Agent:
+        return Agent(
+            config=self.agents_config["diretor_criativo"],
+            llm=get_llm(),
+            verbose=True,
+            allow_delegation=False,
+        )
+
+    @agent
+    def segmentador_publicos(self) -> Agent:
+        return Agent(
+            config=self.agents_config["segmentador_publicos"],
+            llm=get_llm(),
+            verbose=True,
+            allow_delegation=False,
+        )
+
+    @agent
+    def publicador_redes(self) -> Agent:
+        return Agent(
+            config=self.agents_config["publicador_redes"],
+            llm=get_llm(),
+            tools=[PublishToFacebookTool(), PublishToInstagramTool()],
+            verbose=True,
+            allow_delegation=False,
+        )
+
+    # -- Tasks ------------------------------------------------------------ #
+    @task
+    def planejar_campanha(self) -> Task:
+        return Task(config=self.tasks_config["planejar_campanha"])
+
+    @task
+    def criar_roteiro_e_legenda(self) -> Task:
+        return Task(config=self.tasks_config["criar_roteiro_e_legenda"])
+
+    @task
+    def desenvolver_diretrizes_visuais(self) -> Task:
+        return Task(config=self.tasks_config["desenvolver_diretrizes_visuais"])
+
+    @task
+    def direcionar_para_grupos(self) -> Task:
+        return Task(config=self.tasks_config["direcionar_para_grupos"])
+
+    @task
+    def publicar_no_facebook_e_instagram(self) -> Task:
+        return Task(config=self.tasks_config["publicar_no_facebook_e_instagram"])
+
+    # -- Crew ------------------------------------------------------------- #
+    @crew
+    def crew(self) -> Crew:
+        return Crew(
+            agents=self.agents,
+            tasks=self.tasks,
+            process=Process.sequential,
+            verbose=True,
+        )
