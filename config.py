@@ -12,9 +12,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    # --- LLM / Groq ---
+    # --- LLM / Groq (primário) ---
     groq_api_key: str = Field(..., alias="GROQ_API_KEY")
     model: str = Field("groq/openai/gpt-oss-120b", alias="MODEL")
+
+    # --- LLM / Gemini (fallback) ---
+    gemini_api_key: Optional[str] = Field(None, alias="GEMINI_API_KEY")
+    gemini_model: str = Field("gemini/gemini-2.5-flash", alias="GEMINI_MODEL")
 
     # --- Meta / Graph API (opcionais) ---
     meta_app_id: Optional[str] = Field(None, alias="META_APP_ID")
@@ -38,6 +42,11 @@ class Settings(BaseSettings):
     @classmethod
     def _default_se_vazio_model(cls, v):
         return v if v and str(v).strip() else "groq/openai/gpt-oss-120b"
+
+    @field_validator("gemini_model", mode="before")
+    @classmethod
+    def _default_se_vazio_gemini_model(cls, v):
+        return v if v and str(v).strip() else "gemini/gemini-2.5-flash"
 
     @field_validator("produto_topico", mode="before")
     @classmethod
@@ -65,6 +74,13 @@ class Settings(BaseSettings):
     )
     @classmethod
     def _vazio_vira_none(cls, v):
+        if isinstance(v, str) and v.strip() == "":
+            return None
+        return v
+
+    @field_validator("gemini_api_key", mode="before")
+    @classmethod
+    def _gemini_key_vazia_vira_none(cls, v):
         if isinstance(v, str) and v.strip() == "":
             return None
         return v
