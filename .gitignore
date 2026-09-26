@@ -1,0 +1,14 @@
+# Segredos - NUNCA versionar
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# Editor / SO
+.vscode/
+.idea/
+.DS_Store
