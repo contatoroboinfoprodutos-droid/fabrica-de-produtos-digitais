@@ -6,40 +6,36 @@ on:
     - cron: '0 8,14,20 * * *' # Roda 3 vezes ao dia (8h, 14h e 20h UTC)
 
 jobs:
-  build:
+  run-crew:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Baixar codigo do repositorio
-      uses: actions/checkout@v4
+      - name: Checkout do Repositório
+        uses: actions/checkout@v4
 
-    - name: Configurar Python 3.10
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
 
-    - name: Instalar dependencias
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+      - name: Instalar Dependências
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-    - name: Executar a Fabrica de Infoprodutos (gera + publica)
-      env:
-        # Google Gemini (LLM dos agentes via LiteLLM)
-        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        MODEL: "gemini/gemini-1.5-flash"
-
-        # Entrada da campanha (sem isso, roda com os defaults do config.py)
-        PRODUTO_TOPICO: ${{ secrets.PRODUTO_TOPICO }}
-        IMAGEM_PADRAO_URL: ${{ secrets.IMAGEM_PADRAO_URL }}
-
-        # Meta Graph API (Facebook + Instagram) — se ausentes, a etapa de
-        # publicacao apenas reporta "nao configurado", sem falhar o job
-        META_APP_ID: ${{ secrets.META_APP_ID }}
-        META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
-        META_LONG_LIVED_TOKEN: ${{ secrets.META_LONG_LIVED_TOKEN }}
-        FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
-        INSTAGRAM_ACCOUNT_ID: ${{ secrets.INSTAGRAM_ACCOUNT_ID }}
-        BUSINESS_PORTFOLIO_ID: ${{ secrets.BUSINESS_PORTFOLIO_ID }}
-      run: |
-        python main.py
+      - name: Executar Pipeline Principal
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          MODEL: ${{ secrets.MODEL }}
+          PRODUTO_TOPICO: ${{ secrets.PRODUTO_TOPICO }}
+          IMAGEM_PADRAO_URL: ${{ secrets.IMAGEM_PADRAO_URL }}
+          META_APP_ID: ${{ secrets.META_APP_ID }}
+          META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
+          META_LONG_LIVED_TOKEN: ${{ secrets.META_LONG_LIVED_TOKEN }}
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          INSTAGRAM_ACCOUNT_ID: ${{ secrets.INSTAGRAM_ACCOUNT_ID }}
+          BUSINESS_PORTFOLIO_ID: ${{ secrets.BUSINESS_PORTFOLIO_ID }}
+          DRY_RUN: ${{ secrets.DRY_RUN }}
+        run: |
+          python main.py
