@@ -68,9 +68,15 @@ litellm.drop_params = True
 # estourar o limite antes mesmo de chegar à última task (RateLimitError).
 # Esta função, usada como `callback` de cada task (exceto a última, que não
 # precisa esperar por nada depois dela), pausa a execução por tempo
-# suficiente para a "janela" de 1 minuto da Groq resetar antes da próxima
+# suficiente para a "janela" de limite da Groq resetar antes da próxima
 # chamada ao LLM.
-_PAUSA_ENTRE_TASKS_SEGUNDOS = 65
+#
+# Nota: 65s não foi suficiente em testes — a janela da Groq parece resetar
+# em intervalos fixos (ex.: a cada minuto-relógio), não exatamente 60s a
+# partir da última chamada. 90s dá uma margem de segurança mais confiável
+# para cobrir esse desalinhamento, mesmo com o pipeline rodando um pouco
+# mais devagar como consequência.
+_PAUSA_ENTRE_TASKS_SEGUNDOS = 90
 
 
 def _aguardar_reset_rate_limit(output):
