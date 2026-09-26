@@ -11,12 +11,12 @@ jobs:
 
     steps:
     - name: Baixar codigo do repositorio
-      uses: actions/checkout@v4[cite: 11]
+      uses: actions/checkout@v4
 
     - name: Configurar Python 3.10
-      uses: actions/setup-python@v5[cite: 11]
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.10'[cite: 11]
+        python-version: '3.10'
 
     - name: Instalar dependencias
       run: |
@@ -30,19 +30,19 @@ jobs:
         GOOGLE_DRIVE_FOLDER_ID: ${{ secrets.GOOGLE_DRIVE_FOLDER_ID }}
         DRIVE_LIMITE_SEGURANCA_MB: '500'
       run: |
-        python uploader.py --check-only[cite: 11]
+        python uploader.py --check-only
 
     - name: Gerar conteudo (PDF e MP3)
       if: steps.cota_drive.outputs.espaco_suficiente == 'true'
       env:
         GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       run: |
-        python main.py[cite: 11]
+        python main.py
 
     - name: Gerar video de divulgacao
       if: steps.cota_drive.outputs.espaco_suficiente == 'true'
       run: |
-        python gerar_video.py[cite: 11]
+        python gerar_video.py
 
     - name: Upload para o Google Drive e publicar link do video
       id: upload_drive
@@ -51,7 +51,7 @@ jobs:
         GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
         GOOGLE_DRIVE_FOLDER_ID: ${{ secrets.GOOGLE_DRIVE_FOLDER_ID }}
       run: |
-        python uploader.py --upload[cite: 11]
+        python uploader.py --upload
 
     - name: Buscar ultimo item do catalogo (quando o Drive estiver cheio)
       id: catalogo
@@ -60,7 +60,7 @@ jobs:
         GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
         GOOGLE_DRIVE_FOLDER_ID: ${{ secrets.GOOGLE_DRIVE_FOLDER_ID }}
       run: |
-        python uploader.py --catalogo[cite: 11]
+        python uploader.py --catalogo
 
     - name: Publicar no Instagram
       env:
@@ -69,7 +69,7 @@ jobs:
         VIDEO_URL_PUBLICA: ${{ steps.upload_drive.outputs.video_url_publica || steps.catalogo.outputs.video_url_publica }}
         TITULO_PRODUTO: ${{ steps.upload_drive.outputs.titulo_produto || steps.catalogo.outputs.titulo_produto }}
       run: |
-        python postar_instagram.py[cite: 11]
+        python postar_instagram.py
 
     - name: Publicar no TikTok
       env:
@@ -77,14 +77,14 @@ jobs:
         VIDEO_URL_PUBLICA: ${{ steps.upload_drive.outputs.video_url_publica || steps.catalogo.outputs.video_url_publica }}
         TITULO_PRODUTO: ${{ steps.upload_drive.outputs.titulo_produto || steps.catalogo.outputs.titulo_produto }}
       run: |
-        python postar_tiktok.py[cite: 11]
+        python postar_tiktok.py
 
     - name: Salvar artefatos gerados (PDF, MP3 e Video)
       if: steps.cota_drive.outputs.espaco_suficiente == 'true'
-      uses: actions/upload-artifact@v4[cite: 11]
+      uses: actions/upload-artifact@v4
       with:
-        name: infoproduto-gerado[cite: 11]
+        name: infoproduto-gerado
         path: |
           guia_alta_performance.pdf
           audio_companion.mp3
-          video_divulgacao.mp4[cite: 11]
+          video_divulgacao.mp4
