@@ -12,9 +12,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    # --- LLM / Google Gemini ---
-    gemini_api_key: str = Field(..., alias="GEMINI_API_KEY")
-    model: str = Field("gemini/gemini-1.5-flash", alias="MODEL")
+    # --- LLM / Groq ---
+    groq_api_key: str = Field(..., alias="GROQ_API_KEY")
+    model: str = Field("groq/openai/gpt-oss-120b", alias="MODEL")
 
     # --- Meta / Graph API (opcionais) ---
     meta_app_id: Optional[str] = Field(None, alias="META_APP_ID")
@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     @field_validator("model", mode="before")
     @classmethod
     def _default_se_vazio_model(cls, v):
-        return v if v and str(v).strip() else "gemini/gemini-1.5-flash"
+        return v if v and str(v).strip() else "groq/openai/gpt-oss-120b"
 
     @field_validator("produto_topico", mode="before")
     @classmethod
