@@ -1,1 +1,88 @@
+name: Executar Fabrica de Infoprodutos
 
+on:
+  workflow_dispatch: # Permite disparar manualmente pelo painel do GitHub
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Baixar codigo do repositorio
+      uses: actions/checkout@v4
+
+    - name: Configurar Python 3.10
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Instalar dependencias
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Verificar cota do Google Drive
+      id: cota_drive
+      env:
+        GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+        GOOGLE_DRIVE_FOLDER_ID: ${{ secrets.GOOGLE_DRIVE_FOLDER_ID }}
+        DRIVE_LIMITE_SEGURANCA_MB: '500'
+      run: |
+        python uploader.py --check-only
+
+    - name: Gerar conteudo (PDF e MP3)
+      if: steps.cota_drive.outputs.espaco_suficiente == 'true'
+      env:
+        GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      run: |
+        python main.py
+
+    - name: Gerar video de divulgacao
+      if: steps.cota_drive.outputs.espaco_suficiente == 'true'
+      run: |
+        python gerar_video.py
+
+    - name: Upload para o Google Drive e publicar link do video
+      id: upload_drive
+      if: steps.cota_drive.outputs.espaco_suficiente == 'true'
+      env:
+        GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+        GOOGLE_DRIVE_FOLDER_ID: ${{ secrets.GOOGLE_DRIVE_FOLDER_ID }}
+      run: |
+        python uploader.py --upload
+
+    - name: Buscar ultimo item do catalogo (quando o Drive estiver cheio)
+      id: catalogo
+      if: steps.cota_drive.outputs.espaco_suficiente != 'true'
+      env:
+        GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+        GOOGLE_DRIVE_FOLDER_ID: ${{ secrets.GOOGLE_DRIVE_FOLDER_ID }}
+      run: |
+        python uploader.py --catalogo
+
+    - name: Publicar no Instagram
+      env:
+        IG_USER_ID: ${{ secrets.IG_USER_ID }}
+        IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+        VIDEO_URL_PUBLICA: ${{ steps.upload_drive.outputs.video_url_publica || steps.catalogo.outputs.video_url_publica }}
+        TITULO_PRODUTO: ${{ steps.upload_drive.outputs.titulo_produto || steps.catalogo.outputs.titulo_produto }}
+      run: |
+        python postar_instagram.py
+
+    - name: Publicar no TikTok
+      env:
+        TIKTOK_ACCESS_TOKEN: ${{ secrets.TIKTOK_ACCESS_TOKEN }}
+        VIDEO_URL_PUBLICA: ${{ steps.upload_drive.outputs.video_url_publica || steps.catalogo.outputs.video_url_publica }}
+        TITULO_PRODUTO: ${{ steps.upload_drive.outputs.titulo_produto || steps.catalogo.outputs.titulo_produto }}
+      run: |
+        python postar_tiktok.py
+
+    - name: Salvar artefatos gerados (PDF, MP3 e Video)
+      if: steps.cota_drive.outputs.espaco_suficiente == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: infoproduto-gerado
+        path: |
+          guia_alta_performance.pdf
+          audio_companion.mp3
+          video_divulgacao.mp4
