@@ -2,6 +2,8 @@ name: Executar Fabrica de Infoprodutos
 
 on:
   workflow_dispatch: # Permite disparar manualmente pelo painel do GitHub
+  schedule:
+    - cron: '0 8,14,20 * * *' # Roda 3 vezes ao dia (8h, 14h e 20h UTC)
 
 jobs:
   build:
@@ -9,12 +11,12 @@ jobs:
 
     steps:
     - name: Baixar codigo do repositorio
-      uses: actions/checkout@v4
+      uses: actions/checkout@v4[cite: 11]
 
     - name: Configurar Python 3.10
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v5[cite: 11]
       with:
-        python-version: '3.10'
+        python-version: '3.10'[cite: 11]
 
     - name: Instalar dependencias
       run: |
@@ -28,19 +30,19 @@ jobs:
         GOOGLE_DRIVE_FOLDER_ID: ${{ secrets.GOOGLE_DRIVE_FOLDER_ID }}
         DRIVE_LIMITE_SEGURANCA_MB: '500'
       run: |
-        python uploader.py --check-only
+        python uploader.py --check-only[cite: 11]
 
     - name: Gerar conteudo (PDF e MP3)
       if: steps.cota_drive.outputs.espaco_suficiente == 'true'
       env:
         GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       run: |
-        python main.py
+        python main.py[cite: 11]
 
     - name: Gerar video de divulgacao
       if: steps.cota_drive.outputs.espaco_suficiente == 'true'
       run: |
-        python gerar_video.py
+        python gerar_video.py[cite: 11]
 
     - name: Upload para o Google Drive e publicar link do video
       id: upload_drive
@@ -49,7 +51,7 @@ jobs:
         GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
         GOOGLE_DRIVE_FOLDER_ID: ${{ secrets.GOOGLE_DRIVE_FOLDER_ID }}
       run: |
-        python uploader.py --upload
+        python uploader.py --upload[cite: 11]
 
     - name: Buscar ultimo item do catalogo (quando o Drive estiver cheio)
       id: catalogo
@@ -58,7 +60,7 @@ jobs:
         GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
         GOOGLE_DRIVE_FOLDER_ID: ${{ secrets.GOOGLE_DRIVE_FOLDER_ID }}
       run: |
-        python uploader.py --catalogo
+        python uploader.py --catalogo[cite: 11]
 
     - name: Publicar no Instagram
       env:
@@ -67,7 +69,7 @@ jobs:
         VIDEO_URL_PUBLICA: ${{ steps.upload_drive.outputs.video_url_publica || steps.catalogo.outputs.video_url_publica }}
         TITULO_PRODUTO: ${{ steps.upload_drive.outputs.titulo_produto || steps.catalogo.outputs.titulo_produto }}
       run: |
-        python postar_instagram.py
+        python postar_instagram.py[cite: 11]
 
     - name: Publicar no TikTok
       env:
@@ -75,14 +77,14 @@ jobs:
         VIDEO_URL_PUBLICA: ${{ steps.upload_drive.outputs.video_url_publica || steps.catalogo.outputs.video_url_publica }}
         TITULO_PRODUTO: ${{ steps.upload_drive.outputs.titulo_produto || steps.catalogo.outputs.titulo_produto }}
       run: |
-        python postar_tiktok.py
+        python postar_tiktok.py[cite: 11]
 
     - name: Salvar artefatos gerados (PDF, MP3 e Video)
       if: steps.cota_drive.outputs.espaco_suficiente == 'true'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v4[cite: 11]
       with:
-        name: infoproduto-gerado
+        name: infoproduto-gerado[cite: 11]
         path: |
           guia_alta_performance.pdf
           audio_companion.mp3
-          video_divulgacao.mp4
+          video_divulgacao.mp4[cite: 11]
