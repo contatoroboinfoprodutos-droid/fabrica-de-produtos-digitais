@@ -1,0 +1,29 @@
+planejar_campanha:
+  description: >
+    Criar o planejamento para a oferta do produto. Considere que temos produtos com preços variados, com destaque especial para itens super acessíveis a partir de R$ 7,00, que servem como porta de entrada. Defina a linha editorial, o gancho principal e o apelo de preço.
+  expected_output: >
+    Um documento estratégico contendo a faixa de preço do produto, o perfil do comprador, o gancho de atenção e a mensagem central da oferta.
+  agent: conteudo_estrategista
+
+criar_roteiro_e_legenda:
+  description: >
+    Com base no planejamento, crie:
+    1. Um roteiro de áudio/locução curto (até 15 segundos) apresentando o produto e o preço (ex: destacando se é a partir de R$ 7,00).
+    2. Sugestões de legendas intuitivas e dinâmicas que aparecem na tela acompanhando o áudio.
+  expected_output: >
+    Roteiro estruturado dividido em colunas/blocos (Tempo, Áudio/Locução, Texto na Tela/Legenda Intuitiva).
+  agent: redator_senior
+
+desenvolver_diretrizes_visuais:
+  description: >
+    Definir o conceito visual para a imagem ou vídeo do anúncio. A imagem deve focar no produto de forma limpa e atraente, incluindo a diretriz de inserção de um selo chamativo com o preço em destaque (ex: "A partir de R$ 7,00").
+  expected_output: >
+    Guia visual detalhado contendo: descrição da cena/produto, sugestão de paleta de cores, posicionamento do selo de preço e link de imagem de referência (ex: Unsplash).
+  agent: diretor_criativo
+
+direcionar_para_grupos:
+  description: >
+    Com base no produto e na faixa de preço (como os itens de R$ 7,00 ou os demais valores), indique qual é o grupo ou canal ideal para disparar este anúncio (Ex: Grupos de achadinhos/promoções diárias para itens de R$ 7,00; Grupos VIP ou segmentados para produtos de maior valor). Dê dicas de abordagem para a postagem no grupo.
+  expected_output: >
+    Um plano de distribuição contendo: Nome/tipo do grupo ideal, justificativa da escolha e o texto de introdução/chamada para fixar junto ao anúncio no grupo.
+  agent: segmentador_publicos
