@@ -3,6 +3,8 @@ Monta o Crew da Infoproduct Factory a partir de config/agents.yaml e
 config/tasks.yaml (padrão @CrewBase do CrewAI) — 5 agentes, 5 tasks,
 execução sequencial, terminando na publicação real via Meta Graph API.
 """
+import time
+
 import litellm
 from crewai import LLM, Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
@@ -57,6 +59,24 @@ except ImportError:
 litellm.drop_params = True
 
 
+# ---------------------------------------------------------------------------
+# Pausa entre tasks para respeitar o limite de tokens por minuto (TPM) da Groq
+# ---------------------------------------------------------------------------
+# O plano gratuito ("on_demand") da Groq limita o uso a poucos milhares de
+# tokens por minuto. Como as 5 tasks rodam em sequência e cada uma consome
+# uma fatia desse orçamento, o total acumulado em menos de 60s costuma
+# estourar o limite antes mesmo de chegar à última task (RateLimitError).
+# Esta função, usada como `callback` de cada task (exceto a última, que não
+# precisa esperar por nada depois dela), pausa a execução por tempo
+# suficiente para a "janela" de 1 minuto da Groq resetar antes da próxima
+# chamada ao LLM.
+_PAUSA_ENTRE_TASKS_SEGUNDOS = 65
+
+
+def _aguardar_reset_rate_limit(output):
+    time.sleep(_PAUSA_ENTRE_TASKS_SEGUNDOS)
+
+
 def get_llm() -> LLM:
     settings = get_settings()
     return LLM(
@@ -69,10 +89,13 @@ def get_llm() -> LLM:
         # A Groq (plano on_demand) limita o uso a poucos milhares de tokens
         # por minuto. Como o Crew roda 5 agentes em sequência, é comum que
         # uma chamada individual estoure esse limite temporário e receba
-        # litellm.RateLimitError. Em vez de derrubar todo o pipeline, o
-        # LiteLLM (usado internamente pelo CrewAI) tenta novamente sozinho
-        # até `max_retries` vezes, com espera exponencial entre tentativas.
-        max_retries=5,
+        # litellm.RateLimitError. O parâmetro reconhecido pelo LiteLLM para
+        # tentar novamente automaticamente (com espera/backoff) é
+        # `num_retries` — NÃO `max_retries` (esse nome não existe na função
+        # de completion do LiteLLM e é descartado silenciosamente pelo
+        # `litellm.drop_params = True` já configurado acima, o que explica
+        # por que uma tentativa anterior com `max_retries` não teve efeito).
+        num_retries=5,
     )
 
 
@@ -138,19 +161,31 @@ class InfoprodutoFactoryCrew:
     # -- Tasks ------------------------------------------------------------ #
     @task
     def planejar_campanha(self) -> Task:
-        return Task(config=self.tasks_config["planejar_campanha"])
+        return Task(
+            config=self.tasks_config["planejar_campanha"],
+            callback=_aguardar_reset_rate_limit,
+        )
 
     @task
     def criar_roteiro_e_legenda(self) -> Task:
-        return Task(config=self.tasks_config["criar_roteiro_e_legenda"])
+        return Task(
+            config=self.tasks_config["criar_roteiro_e_legenda"],
+            callback=_aguardar_reset_rate_limit,
+        )
 
     @task
     def desenvolver_diretrizes_visuais(self) -> Task:
-        return Task(config=self.tasks_config["desenvolver_diretrizes_visuais"])
+        return Task(
+            config=self.tasks_config["desenvolver_diretrizes_visuais"],
+            callback=_aguardar_reset_rate_limit,
+        )
 
     @task
     def direcionar_para_grupos(self) -> Task:
-        return Task(config=self.tasks_config["direcionar_para_grupos"])
+        return Task(
+            config=self.tasks_config["direcionar_para_grupos"],
+            callback=_aguardar_reset_rate_limit,
+        )
 
     @task
     def publicar_no_facebook_e_instagram(self) -> Task:
