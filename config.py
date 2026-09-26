@@ -44,6 +44,15 @@ class Settings(BaseSettings):
     def _default_se_vazio_topico(cls, v):
         return v if v and str(v).strip() else "Produto em destaque do catálogo desta semana"
 
+    @field_validator("dry_run", mode="before")
+    @classmethod
+    def _vazio_vira_false(cls, v):
+        if v is None or (isinstance(v, str) and v.strip() == ""):
+            return False
+        if isinstance(v, str):
+            return v.strip().lower() in ("true", "1", "t", "yes", "y")
+        return bool(v)
+
     @field_validator(
         "imagem_padrao_url",
         "meta_app_id",
