@@ -1,0 +1,55 @@
+planejar_campanha:
+  description: >
+    Produto/tema desta rodada: "{produto_topico}".
+    Criar o planejamento para a oferta deste produto. Considere que temos produtos com preços variados, com destaque especial para itens super acessíveis a partir de R$ 7,00, que servem como porta de entrada. Defina a linha editorial, o gancho principal e o apelo de preço.
+  expected_output: >
+    Um documento estratégico contendo a faixa de preço do produto, o perfil do comprador, o gancho de atenção e a mensagem central da oferta.
+  agent: conteudo_estrategista
+
+criar_roteiro_e_legenda:
+  description: >
+    Com base no planejamento, crie:
+    1. Um roteiro de áudio/locução curto (até 15 segundos) apresentando o produto e o preço (ex: destacando se é a partir de R$ 7,00).
+    2. Sugestões de legendas intuitivas e dinâmicas que aparecem na tela acompanhando o áudio.
+    3. Uma versão curta e pronta para publicação (2-3 frases + hashtags) que sirva como legenda de post/Instagram e como mensagem de post do Facebook.
+    Separe claramente com os cabeçalhos '### ROTEIRO', '### LEGENDA_TELA' e '### TEXTO_PUBLICACAO'.
+  expected_output: >
+    Roteiro estruturado dividido em colunas/blocos (Tempo, Áudio/Locução, Texto na Tela/Legenda Intuitiva), seguido das seções '### ROTEIRO', '### LEGENDA_TELA' e '### TEXTO_PUBLICACAO'.
+  agent: redator_senior
+  context:
+    - planejar_campanha
+
+desenvolver_diretrizes_visuais:
+  description: >
+    Definir o conceito visual para a imagem ou vídeo do anúncio. A imagem deve focar no produto de forma limpa e atraente, incluindo a diretriz de inserção de um selo chamativo com o preço em destaque (ex: "A partir de R$ 7,00").
+    IMPORTANTE: não invente nem sugira uma URL de imagem de referência (ex.: Unsplash). A URL final da imagem a ser usada na publicação JÁ ESTÁ DEFINIDA e é exatamente: {imagem_padrao_url}
+    Use essa URL literalmente na seção IMAGEM_URL do output — a Meta Graph API só aceita uma URL pública real, não um link de exemplo.
+  expected_output: >
+    Texto em markdown com duas seções: '### BRIEFING_VISUAL' (descrição da cena/produto, paleta de cores e posicionamento do selo de preço) e '### IMAGEM_URL' contendo exatamente a URL fornecida ({imagem_padrao_url}), sem alterações.
+  agent: diretor_criativo
+  context:
+    - criar_roteiro_e_legenda
+
+direcionar_para_grupos:
+  description: >
+    Com base no produto e na faixa de preço (como os itens de R$ 7,00 ou os demais valores), indique qual é o grupo ou canal ideal para disparar este anúncio (Ex: Grupos de achadinhos/promoções diárias para itens de R$ 7,00; Grupos VIP ou segmentados para produtos de maior valor). Dê dicas de abordagem para a postagem no grupo.
+  expected_output: >
+    Um plano de distribuição contendo: Nome/tipo do grupo ideal, justificativa da escolha e o texto de introdução/chamada para fixar junto ao anúncio no grupo.
+  agent: segmentador_publicos
+  context:
+    - planejar_campanha
+
+publicar_no_facebook_e_instagram:
+  description: >
+    Usando o TEXTO_PUBLICACAO e a IMAGEM_URL definidos nas etapas anteriores:
+    1. Chame a tool publish_to_facebook com message=TEXTO_PUBLICACAO e image_url=IMAGEM_URL.
+    2. Chame a tool publish_to_instagram com image_url=IMAGEM_URL e caption=TEXTO_PUBLICACAO (ou a LEGENDA_TELA, se for mais adequada ao Instagram).
+    Ao final, inclua também um resumo de UMA linha do grupo/canal recomendado pela etapa de segmentação, para distribuição manual complementar (WhatsApp/Telegram, que a Meta Graph API não alcança).
+    Reporte o resultado (sucesso com post_id, erro, ou "não configurado") de cada chamada, exatamente como retornado pelas tools — não invente IDs nem resultados.
+  expected_output: >
+    Um relatório final com o status de publicação no Facebook e no Instagram (post_id, erro, ou não configurado) e o resumo do grupo/canal recomendado para distribuição manual.
+  agent: publicador_redes
+  context:
+    - criar_roteiro_e_legenda
+    - desenvolver_diretrizes_visuais
+    - direcionar_para_grupos
