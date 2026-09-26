@@ -59,7 +59,21 @@ litellm.drop_params = True
 
 def get_llm() -> LLM:
     settings = get_settings()
-    return LLM(model=settings.model, api_key=settings.groq_api_key, temperature=0.7)
+    return LLM(
+        model=settings.model,
+        api_key=settings.groq_api_key,
+        temperature=0.7,
+        # ------------------------------------------------------------------
+        # Retry automático para o rate limit (TPM) do plano gratuito da Groq
+        # ------------------------------------------------------------------
+        # A Groq (plano on_demand) limita o uso a poucos milhares de tokens
+        # por minuto. Como o Crew roda 5 agentes em sequência, é comum que
+        # uma chamada individual estoure esse limite temporário e receba
+        # litellm.RateLimitError. Em vez de derrubar todo o pipeline, o
+        # LiteLLM (usado internamente pelo CrewAI) tenta novamente sozinho
+        # até `max_retries` vezes, com espera exponencial entre tentativas.
+        max_retries=5,
+    )
 
 
 @CrewBase
