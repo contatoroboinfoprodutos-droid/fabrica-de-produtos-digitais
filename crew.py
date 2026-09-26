@@ -1,14 +1,16 @@
 """
 Monta o Crew da Infoproduct Factory a partir de config/agents.yaml e
 config/tasks.yaml (padrão @CrewBase do CrewAI) — integrando com o Groq
-e gerenciando os limites de TPM (Rate Limit).
+(primário) e Gemini (fallback automático) para tolerar Rate Limit e
+falhas de conexão sem derrubar o pipeline.
 """
 import re
 import time
 import logging
-from typing import ClassVar
+from typing import ClassVar, Optional, Tuple
 
 import litellm
+from pydantic import PrivateAttr
 from crewai import LLM, Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 
@@ -18,55 +20,113 @@ from tools.crewai_meta_tools import PublishToFacebookTool, PublishToInstagramToo
 logger = logging.getLogger(__name__)
 
 
-# Função de pausa entre tarefas para respeitar o limite de tokens por minuto (TPM) da Groq
 def _aguardar_reset_rate_limit(output):
-    time.sleep(20)  # Pausa de 20 segundos entre tarefas para resetar a janela de TPM
+    time.sleep(20)
 
 
-class GroqRateLimitAwareLLM(LLM):
+# Exceções que consideramos "críticas" o suficiente para acionar o failover
+# depois de esgotadas as tentativas na Groq.
+RETRYABLE_ERRORS: Tuple[type, ...] = (
+    litellm.exceptions.RateLimitError,
+    litellm.exceptions.APIConnectionError,
+    litellm.exceptions.ServiceUnavailableError,
+    litellm.exceptions.Timeout,
+)
+
+
+class GroqWithGeminiFailoverLLM(LLM):
     """
-    Subclasse de crewai.LLM que intercepta RateLimitError da Groq,
-    extrai o tempo de espera exato sugerido pela API ("try again in Xs")
-    e aguarda antes de tentar novamente.
+    LLM primário na Groq com:
+      1. Retry inteligente (lê o "try again in Xs" da própria Groq).
+      2. Failover automático para o Gemini se a Groq esgotar as tentativas
+         ou falhar de forma persistente (rate limit, timeout, conexão).
+    Uma vez acionado o failover, a instância passa a usar o Gemini
+    diretamente nas chamadas seguintes (evita ficar re-tentando a Groq
+    a cada task dentro da mesma execução do crew).
     """
 
     MAX_ATTEMPTS: ClassVar[int] = 6
     FALLBACK_BASE_DELAY: ClassVar[float] = 8.0
 
+    # Atributos privados (não são campos Pydantic do modelo LLM)
+    _fallback_llm: Optional[LLM] = PrivateAttr(default=None)
+    _using_fallback: bool = PrivateAttr(default=False)
+
+    def _build_fallback_llm(self) -> Optional[LLM]:
+        settings = get_settings()
+        if not settings.gemini_api_key:
+            return None
+        return LLM(
+            model=settings.gemini_model,
+            api_key=settings.gemini_api_key,
+            temperature=0.7,
+            max_tokens=1024,
+        )
+
     def call(self, *args, **kwargs):
+        # Se já mudamos para o Gemini nesta instância, vai direto nele.
+        if self._using_fallback and self._fallback_llm is not None:
+            return self._fallback_llm.call(*args, **kwargs)
+
+        last_error: Exception | None = None
         for attempt in range(1, self.MAX_ATTEMPTS + 1):
             try:
                 return super().call(*args, **kwargs)
-            except litellm.exceptions.RateLimitError as e:
+            except RETRYABLE_ERRORS as e:
+                last_error = e
                 wait_time = self._extract_wait_time(str(e))
                 if wait_time is None:
                     wait_time = self.FALLBACK_BASE_DELAY * (2 ** (attempt - 1))
 
                 logger.warning(
-                    "[Groq RateLimit] Tentativa %d/%d — aguardando %.1fs antes de retomar.",
-                    attempt, self.MAX_ATTEMPTS, wait_time,
+                    "[Groq] Tentativa %d/%d falhou (%s) — aguardando %.1fs.",
+                    attempt, self.MAX_ATTEMPTS, type(e).__name__, wait_time,
                 )
                 time.sleep(wait_time + 0.5)
 
-                if attempt == self.MAX_ATTEMPTS:
-                    logger.error("Rate limit da Groq persistiu após %d tentativas.", attempt)
-                    raise
-        raise RuntimeError("Não foi possível completar a chamada à Groq.")
+        # Groq esgotou as tentativas -> tenta failover para Gemini
+        logger.warning(
+            "[Failover] Groq falhou após %d tentativas (%s). Tentando Gemini...",
+            self.MAX_ATTEMPTS, type(last_error).__name__,
+        )
+
+        fallback = self._build_fallback_llm()
+        if fallback is None:
+            logger.error(
+                "Sem GEMINI_API_KEY configurada — não é possível fazer failover. "
+                "Propagando o erro original da Groq."
+            )
+            raise last_error
+
+        try:
+            result = fallback.call(*args, **kwargs)
+        except Exception as fallback_error:
+            logger.error(
+                "[Failover] Gemini também falhou: %s. Pipeline será interrompido.",
+                fallback_error,
+            )
+            raise
+
+        # Sucesso no Gemini: fixa o fallback para o resto da execução desta instância
+        self._fallback_llm = fallback
+        self._using_fallback = True
+        logger.info("[Failover] Ativado com sucesso — usando Gemini (%s) a partir de agora.", fallback.model)
+        return result
 
     @staticmethod
-    def _extract_wait_time(error_message: str):
+    def _extract_wait_time(error_message: str) -> Optional[float]:
         match = re.search(r"try again in ([\d.]+)s", error_message)
         return float(match.group(1)) if match else None
 
 
 def get_llm() -> LLM:
     settings = get_settings()
-    return GroqRateLimitAwareLLM(
+    return GroqWithGeminiFailoverLLM(
         model=settings.model,
         api_key=settings.groq_api_key,
         temperature=0.7,
-        max_tokens=1024,   # limita o tamanho de cada resposta, ajuda a não estourar o TPM
-        num_retries=5,     # retry nativo do litellm como primeira camada
+        max_tokens=1024,
+        num_retries=5,
     )
 
 
@@ -77,7 +137,7 @@ class InfoprodutoFactoryCrew:
     agents_config = "config/agents.yaml"
     tasks_config = "config/tasks.yaml"
 
-    # -- Agentes -------------------------------------------------------- #
+    # -- Agentes (sem mudanças na assinatura, só continuam usando get_llm()) --
     @agent
     def conteudo_estrategista(self) -> Agent:
         return Agent(
@@ -129,46 +189,34 @@ class InfoprodutoFactoryCrew:
             cache=False,
         )
 
-    # -- Tasks ------------------------------------------------------------ #
+    # -- Tasks (sem mudanças) --
     @task
     def planejar_campanha(self) -> Task:
-        return Task(
-            config=self.tasks_config["planejar_campanha"],
-            callback=_aguardar_reset_rate_limit,
-        )
+        return Task(config=self.tasks_config["planejar_campanha"], callback=_aguardar_reset_rate_limit)
 
     @task
     def criar_roteiro_e_legenda(self) -> Task:
-        return Task(
-            config=self.tasks_config["criar_roteiro_e_legenda"],
-            callback=_aguardar_reset_rate_limit,
-        )
+        return Task(config=self.tasks_config["criar_roteiro_e_legenda"], callback=_aguardar_reset_rate_limit)
 
     @task
     def desenvolver_diretrizes_visuais(self) -> Task:
-        return Task(
-            config=self.tasks_config["desenvolver_diretrizes_visuais"],
-            callback=_aguardar_reset_rate_limit,
-        )
+        return Task(config=self.tasks_config["desenvolver_diretrizes_visuais"], callback=_aguardar_reset_rate_limit)
 
     @task
     def direcionar_para_grupos(self) -> Task:
-        return Task(
-            config=self.tasks_config["direcionar_para_grupos"],
-            callback=_aguardar_reset_rate_limit,
-        )
+        return Task(config=self.tasks_config["direcionar_para_grupos"], callback=_aguardar_reset_rate_limit)
 
     @task
     def publicar_no_facebook_e_instagram(self) -> Task:
         return Task(config=self.tasks_config["publicar_no_facebook_e_instagram"])
 
-    # -- Crew ------------------------------------------------------------- #
+    # -- Crew --
     @crew
     def crew(self) -> Crew:
         return Crew(
             agents=self.agents,
             tasks=self.tasks,
             process=Process.sequential,
-            max_rpm=6,   # throttle adicional no nível da crew inteira
+            max_rpm=6,
             verbose=True,
         )
