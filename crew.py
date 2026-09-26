@@ -1,6 +1,6 @@
 """
 Monta o Crew da Infoproduct Factory a partir de config/agents.yaml e
-config/tasks.yaml (padrão @CrewBase do CrewAI) — integrando com o Google Gemini.
+config/tasks.yaml (padrão @CrewBase do CrewAI) — integrando com o Groq.
 """
 from crewai import LLM, Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
@@ -13,7 +13,7 @@ def get_llm() -> LLM:
     settings = get_settings()
     return LLM(
         model=settings.model,
-        api_key=settings.gemini_api_key,
+        api_key=settings.groq_api_key,
         temperature=0.7,
     )
 
