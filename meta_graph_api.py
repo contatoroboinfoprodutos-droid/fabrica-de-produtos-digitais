@@ -59,6 +59,12 @@ class MetaGraphAPI:
         permissões pages_show_list / pages_manage_posts / instagram_basic /
         instagram_content_publish concedidas).
         """
+        if not self.settings.meta_long_lived_token or not self.settings.fb_page_id:
+            raise MetaGraphAPIError(
+                "Credenciais da Meta não configuradas (META_LONG_LIVED_TOKEN e/ou "
+                "FB_PAGE_ID ausentes). Publicação pulada."
+            )
+
         if self._page_access_token_cache and not force_refresh:
             return self._page_access_token_cache
 
@@ -120,6 +126,11 @@ class MetaGraphAPI:
     # Instagram (fluxo de dois passos: media -> media_publish)
     # ------------------------------------------------------------------ #
     def publish_instagram_post(self, image_url: str, caption: str) -> PublishResult:
+        if not self.settings.instagram_account_id:
+            raise MetaGraphAPIError(
+                "INSTAGRAM_ACCOUNT_ID não configurado. Publicação pulada."
+            )
+
         page_token = self.get_page_access_token()
 
         if self.settings.dry_run:
