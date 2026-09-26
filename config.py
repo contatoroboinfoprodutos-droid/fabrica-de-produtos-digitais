@@ -15,7 +15,7 @@ class Settings(BaseSettings):
 
     # --- LLM / Groq ---
     groq_api_key: str = Field(..., alias="GROQ_API_KEY")
-    model: str = Field("groq/llama-3.3-70b-versatile", alias="MODEL")
+    model: str = Field("groq/openai/gpt-oss-120b", alias="MODEL")
 
     # --- Meta / Graph API ---
     meta_app_id: str = Field(..., alias="META_APP_ID")
