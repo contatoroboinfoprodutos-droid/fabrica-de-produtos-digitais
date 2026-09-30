@@ -1,0 +1,51 @@
+"""Configuração exclusiva do crew low ticket. Variáveis de ambiente usam prefixo LT_
+para não colidir com as dos outros robôs."""
+import os
+
+try:  # lê o .env local (no GitHub Actions as variáveis já vêm do ambiente)
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+# --- Marca (Instagram + TikTok) ---
+# Nome escolhido: "Digital Rápido". Verifique se o @ está livre no Instagram e no TikTok.
+# Para trocar sem editar o código: defina LT_BRAND_NAME e LT_BRAND_HANDLE.
+BRAND_NAME = os.getenv("LT_BRAND_NAME", "Digital Rápido")
+BRAND_HANDLE = os.getenv("LT_BRAND_HANDLE", "@digitalrapido")
+BRAND_TONE = "direto, prático, humano, sem promessas de enriquecimento fácil"
+
+# --- Produto ---
+OFFER_PRICE = "R$ 7,00"
+OFFER_LINK = os.getenv("LT_OFFER_LINK", "https://SEU-LINK-DE-CHECKOUT")
+NICHE = os.getenv("LT_NICHE", "infoprodutos digitais sobre assuntos diversos, sempre com temas atuais e em alta")
+
+# --- LLM (Gemini por padrão, igual ao robô existente; Groq opcional) ---
+# LT_LLM_PROVIDER=gemini (padrão) ou groq
+LLM_PROVIDER = os.getenv("LT_LLM_PROVIDER", "gemini").strip().lower() or "gemini"
+LLM_MODEL = (os.getenv("LT_LLM_MODEL", "").strip()
+             or (os.getenv("GEMINI_MODEL", "").strip() or "gemini/gemini-2.5-flash"
+                 if LLM_PROVIDER == "gemini" else "groq/llama-3.3-70b-versatile"))
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+
+# --- Publicação ---
+DRY_RUN = os.getenv("LT_DRY_RUN", "true").lower() == "true"  # começa SEM publicar de verdade
+IG_USER_ID = os.getenv("LT_IG_USER_ID", "")
+IG_ACCESS_TOKEN = os.getenv("LT_IG_ACCESS_TOKEN", "")
+TIKTOK_ACCESS_TOKEN = os.getenv("LT_TIKTOK_ACCESS_TOKEN", "")
+# URL pública onde as imagens geradas ficam hospedadas (Instagram exige URL pública)
+PUBLIC_IMAGE_BASE_URL = os.getenv("LT_PUBLIC_IMAGE_BASE_URL", "").rstrip("/")
+OUTPUT_DIR = os.getenv("LT_OUTPUT_DIR", "output_lowticket")
+
+# --- Roteiro diário ---
+SLOTS = {
+    "manha": {
+        "tipo": "VALOR",
+        "descricao": "Conteúdo de alto valor prático / quebra de objeção. Sem venda direta; CTA leve (seguir/salvar).",
+    },
+    "tarde": {
+        "tipo": "OFERTA",
+        "descricao": f"Oferta direta do infoproduto de {OFFER_PRICE}. CTA claro para o link. Sem exageros nem garantias de ganho.",
+    },
+}

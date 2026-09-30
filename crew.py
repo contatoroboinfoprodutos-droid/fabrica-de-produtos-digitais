@@ -1,133 +1,65 @@
 """
 Monta o Crew da Infoproduct Factory a partir de config/agents.yaml e
-config/tasks.yaml (padrão @CrewBase do CrewAI) — integrando com o Groq
-(primário) e Gemini (fallback automático) para tolerar Rate Limit e
-falhas de conexão sem derrubar o pipeline.
+config/tasks.yaml (padrão @CrewBase do CrewAI) — 5 agentes, 5 tasks,
+execução sequencial, terminando na publicação real via Meta Graph API.
 """
-import re
-import time
-import logging
-from typing import ClassVar, Optional, Tuple
-
 import litellm
-from pydantic import PrivateAttr
 from crewai import LLM, Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 
 from config import get_settings
 from tools.crewai_meta_tools import PublishToFacebookTool, PublishToInstagramTool
 
-logger = logging.getLogger(__name__)
+# ---------------------------------------------------------------------------
+# Compatibilidade CrewAI 1.15.x + Groq (issue conhecida do CrewAI: #5886)
+# ---------------------------------------------------------------------------
+# O executor do agente chama mark_cache_breakpoint() incondicionalmente para
+# QUALQUER provider (não só Anthropic), injetando a chave "cache_breakpoint"
+# diretamente no dict da mensagem *antes* de ela chegar ao LiteLLM. Como o
+# campo já está dentro da mensagem (não é um parâmetro de request), o
+# `litellm.drop_params` não tem efeito aqui — ele só descarta parâmetros de
+# nível superior da chamada, não chaves arbitrárias dentro de `messages`.
+#
+# Correções oficiais existem (PRs #5887, #6188, #6314), mas ainda não estão
+# presentes na 1.15.22. Contorno: sobrescrever mark_cache_breakpoint como
+# no-op nos três lugares que a importam por referência (from ... import ...),
+# já que patchear só o módulo de origem não afeta os nomes já vinculados nos
+# executores. Isso é seguro: só desativa a marcação de prompt-caching (que o
+# Groq não usa mesmo) e não afeta a lógica de negócio dos agentes.
+try:
+    import crewai.llms.cache as _crewai_cache
 
+    def _noop_mark_cache_breakpoint(message, *args, **kwargs):
+        return message
 
-def _aguardar_reset_rate_limit(output):
-    time.sleep(20)
+    _crewai_cache.mark_cache_breakpoint = _noop_mark_cache_breakpoint
 
+    try:
+        import crewai.agents.crew_agent_executor as _crew_agent_executor
 
-# Exceções que consideramos "críticas" o suficiente para acionar o failover
-# depois de esgotadas as tentativas na Groq.
-RETRYABLE_ERRORS: Tuple[type, ...] = (
-    litellm.exceptions.RateLimitError,
-    litellm.exceptions.APIConnectionError,
-    litellm.exceptions.ServiceUnavailableError,
-    litellm.exceptions.Timeout,
-)
+        _crew_agent_executor.mark_cache_breakpoint = _noop_mark_cache_breakpoint
+    except ImportError:
+        pass
 
+    try:
+        import crewai.experimental.agent_executor as _experimental_agent_executor
 
-class GroqWithGeminiFailoverLLM(LLM):
-    """
-    LLM primário na Groq com:
-      1. Retry inteligente (lê o "try again in Xs" da própria Groq).
-      2. Failover automático para o Gemini se a Groq esgotar as tentativas
-         ou falhar de forma persistente (rate limit, timeout, conexão).
-    Uma vez acionado o failover, a instância passa a usar o Gemini
-    diretamente nas chamadas seguintes (evita ficar re-tentando a Groq
-    a cada task dentro da mesma execução do crew).
-    """
+        _experimental_agent_executor.mark_cache_breakpoint = _noop_mark_cache_breakpoint
+    except ImportError:
+        pass
+except ImportError:
+    # Versão do CrewAI sem esse módulo (bug já corrigido ou API diferente) —
+    # nada a fazer.
+    pass
 
-    MAX_ATTEMPTS: ClassVar[int] = 6
-    FALLBACK_BASE_DELAY: ClassVar[float] = 8.0
-
-    # Atributos privados (não são campos Pydantic do modelo LLM)
-    _fallback_llm: Optional[LLM] = PrivateAttr(default=None)
-    _using_fallback: bool = PrivateAttr(default=False)
-
-    def _build_fallback_llm(self) -> Optional[LLM]:
-        settings = get_settings()
-        if not settings.gemini_api_key:
-            return None
-        return LLM(
-            model=settings.gemini_model,
-            api_key=settings.gemini_api_key,
-            temperature=0.7,
-            max_tokens=1024,
-        )
-
-    def call(self, *args, **kwargs):
-        # Se já mudamos para o Gemini nesta instância, vai direto nele.
-        if self._using_fallback and self._fallback_llm is not None:
-            return self._fallback_llm.call(*args, **kwargs)
-
-        last_error: Exception | None = None
-        for attempt in range(1, self.MAX_ATTEMPTS + 1):
-            try:
-                return super().call(*args, **kwargs)
-            except RETRYABLE_ERRORS as e:
-                last_error = e
-                wait_time = self._extract_wait_time(str(e))
-                if wait_time is None:
-                    wait_time = self.FALLBACK_BASE_DELAY * (2 ** (attempt - 1))
-
-                logger.warning(
-                    "[Groq] Tentativa %d/%d falhou (%s) — aguardando %.1fs.",
-                    attempt, self.MAX_ATTEMPTS, type(e).__name__, wait_time,
-                )
-                time.sleep(wait_time + 0.5)
-
-        # Groq esgotou as tentativas -> tenta failover para Gemini
-        logger.warning(
-            "[Failover] Groq falhou após %d tentativas (%s). Tentando Gemini...",
-            self.MAX_ATTEMPTS, type(last_error).__name__,
-        )
-
-        fallback = self._build_fallback_llm()
-        if fallback is None:
-            logger.error(
-                "Sem GEMINI_API_KEY configurada — não é possível fazer failover. "
-                "Propagando o erro original da Groq."
-            )
-            raise last_error
-
-        try:
-            result = fallback.call(*args, **kwargs)
-        except Exception as fallback_error:
-            logger.error(
-                "[Failover] Gemini também falhou: %s. Pipeline será interrompido.",
-                fallback_error,
-            )
-            raise
-
-        # Sucesso no Gemini: fixa o fallback para o resto da execução desta instância
-        self._fallback_llm = fallback
-        self._using_fallback = True
-        logger.info("[Failover] Ativado com sucesso — usando Gemini (%s) a partir de agora.", fallback.model)
-        return result
-
-    @staticmethod
-    def _extract_wait_time(error_message: str) -> Optional[float]:
-        match = re.search(r"try again in ([\d.]+)s", error_message)
-        return float(match.group(1)) if match else None
+# Segunda camada de defesa para outros parâmetros não suportados pelo Groq
+# que possam ser injetados no nível da chamada HTTP.
+litellm.drop_params = True
 
 
 def get_llm() -> LLM:
     settings = get_settings()
-    return GroqWithGeminiFailoverLLM(
-        model=settings.model,
-        api_key=settings.groq_api_key,
-        temperature=0.7,
-        max_tokens=1024,
-        num_retries=5,
-    )
+    return LLM(model=settings.model, api_key=settings.groq_api_key, temperature=0.7)
 
 
 @CrewBase
@@ -137,7 +69,7 @@ class InfoprodutoFactoryCrew:
     agents_config = "config/agents.yaml"
     tasks_config = "config/tasks.yaml"
 
-    # -- Agentes (sem mudanças na assinatura, só continuam usando get_llm()) --
+    # -- Agentes -------------------------------------------------------- #
     @agent
     def conteudo_estrategista(self) -> Agent:
         return Agent(
@@ -145,7 +77,7 @@ class InfoprodutoFactoryCrew:
             llm=get_llm(),
             verbose=True,
             allow_delegation=False,
-            cache=False,
+            cache=False,  # evita o gatilho de prompt-caching problemático com Groq (ver nota acima)
         )
 
     @agent
@@ -189,34 +121,33 @@ class InfoprodutoFactoryCrew:
             cache=False,
         )
 
-    # -- Tasks (sem mudanças) --
+    # -- Tasks ------------------------------------------------------------ #
     @task
     def planejar_campanha(self) -> Task:
-        return Task(config=self.tasks_config["planejar_campanha"], callback=_aguardar_reset_rate_limit)
+        return Task(config=self.tasks_config["planejar_campanha"])
 
     @task
     def criar_roteiro_e_legenda(self) -> Task:
-        return Task(config=self.tasks_config["criar_roteiro_e_legenda"], callback=_aguardar_reset_rate_limit)
+        return Task(config=self.tasks_config["criar_roteiro_e_legenda"])
 
     @task
     def desenvolver_diretrizes_visuais(self) -> Task:
-        return Task(config=self.tasks_config["desenvolver_diretrizes_visuais"], callback=_aguardar_reset_rate_limit)
+        return Task(config=self.tasks_config["desenvolver_diretrizes_visuais"])
 
     @task
     def direcionar_para_grupos(self) -> Task:
-        return Task(config=self.tasks_config["direcionar_para_grupos"], callback=_aguardar_reset_rate_limit)
+        return Task(config=self.tasks_config["direcionar_para_grupos"])
 
     @task
     def publicar_no_facebook_e_instagram(self) -> Task:
         return Task(config=self.tasks_config["publicar_no_facebook_e_instagram"])
 
-    # -- Crew --
+    # -- Crew ------------------------------------------------------------- #
     @crew
     def crew(self) -> Crew:
         return Crew(
             agents=self.agents,
             tasks=self.tasks,
             process=Process.sequential,
-            max_rpm=6,
             verbose=True,
         )

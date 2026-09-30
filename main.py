@@ -18,16 +18,6 @@ import sys
 
 from dotenv import load_dotenv
 
-# --- WORKAROUND PARA O GROQ ---
-# Evita que o CrewAI injete 'cache_breakpoint' nas mensagens do sistema,
-# o que gera BadRequestError na API do Groq.
-try:
-    import crewai.llms.cache as _crewai_cache
-    _crewai_cache.mark_cache_breakpoint = lambda msg: msg
-except (ImportError, AttributeError):
-    pass
-# -----------------------------
-
 from config import get_settings
 from crew import InfoprodutoFactoryCrew
 
