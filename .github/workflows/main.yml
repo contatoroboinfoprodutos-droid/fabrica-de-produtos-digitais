@@ -27,6 +27,9 @@ jobs:
       - name: Executar Pipeline Principal
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          LLM_PROVIDER: ${{ secrets.LLM_PROVIDER }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
           MODEL: ${{ secrets.MODEL }}
           PRODUTO_TOPICO: ${{ secrets.PRODUTO_TOPICO }}
           IMAGEM_PADRAO_URL: ${{ secrets.IMAGEM_PADRAO_URL }}

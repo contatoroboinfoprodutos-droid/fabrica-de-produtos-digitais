@@ -12,3 +12,9 @@ venv/
 .vscode/
 .idea/
 .DS_Store
+
+log.txt
+yamls.txt
+projeto_completo.txt
+*.bak
+output_lowticket/

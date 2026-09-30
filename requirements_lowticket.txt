@@ -1,8 +1,0 @@
-crewai[google-genai]>=0.86.0
-crewai-tools>=0.25.0
-litellm
-python-dotenv>=1.0.1
-pydantic>=2.7.0
-pydantic-settings>=2.3.0
-requests>=2.31.0
-Pillow
