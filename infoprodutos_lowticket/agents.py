@@ -13,8 +13,11 @@ if not _api_key:
                        "(defina GEMINI_API_KEY, OPENROUTER_API_KEY ou GROQ_API_KEY).")
 
 if cfg.LLM_PROVIDER == "openrouter":
-    # OpenRouter é compatível com a API da OpenAI: o prefixo "openai/" + base_url funciona em qualquer versão do CrewAI.
+    # OpenRouter e Groq são compatíveis com a API da OpenAI: o prefixo "openai/" + base_url funciona em qualquer versão do CrewAI.
     _llm = LLM(model="openai/" + cfg.LLM_MODEL, base_url=cfg.OPENROUTER_BASE_URL,
+               api_key=_api_key, temperature=0.7, max_tokens=2048)
+elif cfg.LLM_PROVIDER == "groq":
+    _llm = LLM(model="openai/" + cfg.LLM_MODEL, base_url=cfg.GROQ_BASE_URL,
                api_key=_api_key, temperature=0.7, max_tokens=2048)
 else:
     _llm = LLM(model=cfg.LLM_MODEL, api_key=_api_key, temperature=0.7, max_tokens=2048)
