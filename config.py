@@ -19,7 +19,7 @@ class Settings(BaseSettings):
 
     # --- LLM / Gemini (fallback) ---
     gemini_api_key: Optional[str] = Field(None, alias="GEMINI_API_KEY")
-    gemini_model: str = Field("gemini/gemini-2.5-flash", alias="GEMINI_MODEL")
+    gemini_model: str = Field("gemini/gemini-3.8-flash", alias="GEMINI_MODEL")
 
     # --- Meta / Graph API (opcionais) ---
     meta_app_id: Optional[str] = Field(None, alias="META_APP_ID")
@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     @field_validator("gemini_model", mode="before")
     @classmethod
     def _default_se_vazio_gemini_model(cls, v):
-        return v if v and str(v).strip() else "gemini/gemini-2.5-flash"
+        return v if v and str(v).strip() else "gemini/gemini-3.8-flash"
 
     @field_validator("produto_topico", mode="before")
     @classmethod
