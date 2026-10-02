@@ -2,11 +2,22 @@ from crewai import Agent, LLM
 from . import config_lt as cfg
 from .tools_lt import lt_render_card, lt_publicar_meta, lt_publicar_tiktok
 
-_api_key = cfg.GEMINI_API_KEY if cfg.LLM_PROVIDER == "gemini" else cfg.GROQ_API_KEY
+if cfg.LLM_PROVIDER == "openrouter":
+    _api_key = cfg.OPENROUTER_API_KEY
+elif cfg.LLM_PROVIDER == "gemini":
+    _api_key = cfg.GEMINI_API_KEY
+else:
+    _api_key = cfg.GROQ_API_KEY
 if not _api_key:
     raise RuntimeError(f"Chave do LLM ausente para LT_LLM_PROVIDER={cfg.LLM_PROVIDER} "
-                       "(defina GEMINI_API_KEY ou GROQ_API_KEY).")
-_llm = LLM(model=cfg.LLM_MODEL, api_key=_api_key, temperature=0.7, max_tokens=2048)
+                       "(defina GEMINI_API_KEY, OPENROUTER_API_KEY ou GROQ_API_KEY).")
+
+if cfg.LLM_PROVIDER == "openrouter":
+    # OpenRouter é compatível com a API da OpenAI: o prefixo "openai/" + base_url funciona em qualquer versão do CrewAI.
+    _llm = LLM(model="openai/" + cfg.LLM_MODEL, base_url=cfg.OPENROUTER_BASE_URL,
+               api_key=_api_key, temperature=0.7, max_tokens=2048)
+else:
+    _llm = LLM(model=cfg.LLM_MODEL, api_key=_api_key, temperature=0.7, max_tokens=2048)
 
 trend_scout_agent = Agent(
     role="Pesquisador de dores e ganchos de baixo custo",
