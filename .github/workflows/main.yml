@@ -24,12 +24,30 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Escolhe o modelo Gemini disponível
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
+        run: |
+          # Testa o modelo principal; se estiver sobrecarregado (503) ou sem cota (429), usa o reserva.
+          PRIM="${GEMINI_MODEL:-gemini/gemini-3.8-flash}"; PRIM="${PRIM#gemini/}"
+          ESCOLHIDO="$PRIM"
+          for M in "$PRIM" gemini-3.7-flash; do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" -m 40 \
+              -H "x-goog-api-key: $GEMINI_API_KEY" -H "Content-Type: application/json" \
+              -d '{"contents":[{"parts":[{"text":"ok"}]}],"generationConfig":{"maxOutputTokens":5}}' \
+              "https://generativelanguage.googleapis.com/v1beta/models/$M:generateContent")
+            echo "Modelo $M respondeu HTTP $CODE"
+            if [ "$CODE" = "200" ]; then ESCOLHIDO="$M"; break; fi
+          done
+          echo "Usando gemini/$ESCOLHIDO"
+          echo "GEMINI_ESCOLHIDO=gemini/$ESCOLHIDO" >> $GITHUB_ENV
       - name: Executar Pipeline Principal
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           LLM_PROVIDER: ${{ secrets.LLM_PROVIDER || 'gemini' }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
+          GEMINI_MODEL: ${{ env.GEMINI_ESCOLHIDO || secrets.GEMINI_MODEL }}
           MODEL: ${{ secrets.MODEL }}
           PRODUTO_TOPICO: ${{ secrets.PRODUTO_TOPICO }}
           IMAGEM_PADRAO_URL: ${{ secrets.IMAGEM_PADRAO_URL }}

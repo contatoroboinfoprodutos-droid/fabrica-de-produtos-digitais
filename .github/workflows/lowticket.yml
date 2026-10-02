@@ -35,6 +35,25 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then S="${{ github.event.inputs.slot }}";
           elif [ "${{ github.event.schedule }}" = "0 12 * * *" ]; then S=manha; else S=tarde; fi
           echo "SLOT=$S" >> $GITHUB_ENV
+      - name: Escolhe o modelo Gemini disponível
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
+        run: |
+          # Testa o modelo principal; se estiver sobrecarregado (503) ou sem cota (429), usa o reserva.
+          PRIM="${GEMINI_MODEL:-gemini/gemini-3.8-flash}"; PRIM="${PRIM#gemini/}"
+          ESCOLHIDO="$PRIM"
+          for M in "$PRIM" gemini-3.7-flash; do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" -m 40 \
+              -H "x-goog-api-key: $GEMINI_API_KEY" -H "Content-Type: application/json" \
+              -d '{"contents":[{"parts":[{"text":"ok"}]}],"generationConfig":{"maxOutputTokens":5}}' \
+              "https://generativelanguage.googleapis.com/v1beta/models/$M:generateContent")
+            echo "Modelo $M respondeu HTTP $CODE"
+            if [ "$CODE" = "200" ]; then ESCOLHIDO="$M"; break; fi
+          done
+          echo "Usando gemini/$ESCOLHIDO"
+          echo "GEMINI_ESCOLHIDO=gemini/$ESCOLHIDO" >> $GITHUB_ENV
+          echo "LT_LLM_MODEL=gemini/$ESCOLHIDO" >> $GITHUB_ENV
       - name: Executa o robô
         run: |
           # Em simulação (LT_DRY_RUN=true) tenta até 3 vezes se o Gemini estiver sobrecarregado (503).
