@@ -4,7 +4,7 @@ config/tasks.yaml (padrão @CrewBase do CrewAI) — integrando com o Groq
 (primário) e Gemini (fallback automático) para tolerar Rate Limit e
 falhas de conexão sem derrubar o pipeline.
 
-Provedores aceitos em LLM_PROVIDER: "gemini", "openrouter" ou "groq".
+Provedores aceitos em LLM_PROVIDER: "gemini", "groq" ou "openrouter".
 O workflow escolhe o provedor disponível antes de rodar.
 """
 import re
@@ -135,6 +135,19 @@ def get_llm() -> LLM:
             model="openai/" + settings.openrouter_model,
             base_url="https://openrouter.ai/api/v1",
             api_key=settings.openrouter_api_key,
+            temperature=0.7,
+            max_tokens=2048,
+        )
+
+    # Groq: também compatível com a API da OpenAI (mesmo truque do OpenRouter).
+    if provider == 'groq' and settings.groq_api_key:
+        modelo = settings.model or "openai/gpt-oss-120b"
+        if modelo.startswith("groq/"):
+            modelo = modelo[len("groq/"):]
+        return LLM(
+            model="openai/" + modelo,
+            base_url="https://api.groq.com/openai/v1",
+            api_key=settings.groq_api_key,
             temperature=0.7,
             max_tokens=2048,
         )
