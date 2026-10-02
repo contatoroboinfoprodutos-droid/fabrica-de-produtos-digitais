@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     gemini_api_key: Optional[str] = Field(None, alias="GEMINI_API_KEY")
     gemini_model: str = Field("gemini/gemini-3.8-flash", alias="GEMINI_MODEL")
 
+    # --- LLM / OpenRouter (reserva independente do Google) ---
+    openrouter_api_key: Optional[str] = Field(None, alias="OPENROUTER_API_KEY")
+    openrouter_model: str = Field("qwen/qwen3-coder:free", alias="OPENROUTER_MODEL")
+
     # --- Meta / Graph API (opcionais) ---
     meta_app_id: Optional[str] = Field(None, alias="META_APP_ID")
     meta_app_secret: Optional[str] = Field(None, alias="META_APP_SECRET")
@@ -49,6 +53,11 @@ class Settings(BaseSettings):
     def _default_se_vazio_gemini_model(cls, v):
         return v if v and str(v).strip() else "gemini/gemini-3.8-flash"
 
+    @field_validator("openrouter_model", mode="before")
+    @classmethod
+    def _default_se_vazio_openrouter_model(cls, v):
+        return v if v and str(v).strip() else "qwen/qwen3-coder:free"
+
     @field_validator("produto_topico", mode="before")
     @classmethod
     def _default_se_vazio_topico(cls, v):
@@ -71,6 +80,7 @@ class Settings(BaseSettings):
         "fb_page_id",
         "instagram_account_id",
         "business_portfolio_id",
+        "openrouter_api_key",
         mode="before",
     )
     @classmethod
