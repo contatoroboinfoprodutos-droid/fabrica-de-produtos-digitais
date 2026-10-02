@@ -24,7 +24,7 @@ NICHE = os.getenv("LT_NICHE", "infoprodutos digitais sobre assuntos diversos, se
 # LT_LLM_PROVIDER=gemini (padrão) ou groq
 LLM_PROVIDER = os.getenv("LT_LLM_PROVIDER", "gemini").strip().lower() or "gemini"
 LLM_MODEL = (os.getenv("LT_LLM_MODEL", "").strip()
-             or (os.getenv("GEMINI_MODEL", "").strip() or "gemini/gemini-2.5-flash"
+             or (os.getenv("GEMINI_MODEL", "").strip() or "gemini/gemini-3.8-flash"
                  if LLM_PROVIDER == "gemini" else "groq/llama-3.3-70b-versatile"))
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
