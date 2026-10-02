@@ -21,6 +21,10 @@ jobs:
       LT_TIKTOK_ACCESS_TOKEN: ${{ secrets.LT_TIKTOK_ACCESS_TOKEN }}
       LT_PUBLIC_IMAGE_BASE_URL: ${{ vars.LT_PUBLIC_IMAGE_BASE_URL }}
       LT_OFFER_LINK: ${{ vars.LT_OFFER_LINK }}
+      UNSPLASH_API_KEY: ${{ secrets.UNSPLASH_API_KEY }}
+      META_LONG_LIVED_TOKEN: ${{ secrets.META_LONG_LIVED_TOKEN }}
+      FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+      INSTAGRAM_ACCOUNT_ID: ${{ secrets.INSTAGRAM_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
