@@ -49,9 +49,31 @@ def _foto_unsplash(consulta):
         return None
 
 
+def _quebrar(d, texto, fonte, largura_max):
+    """Quebra o texto em linhas medindo a largura REAL em pixels (não em nº de caracteres)."""
+    linhas, atual = [], ""
+    for palavra in (texto or "").split():
+        teste = f"{atual} {palavra}".strip()
+        if not atual or d.textlength(teste, font=fonte) <= largura_max:
+            atual = teste
+        else:
+            linhas.append(atual)
+            atual = palavra
+    if atual:
+        linhas.append(atual)
+    return linhas
+
+
+def _slot_do_arquivo(filename):
+    """post_tarde.png -> 'tarde'."""
+    nome = os.path.splitext(os.path.basename(filename))[0]
+    return nome.replace("post_", "", 1)
+
+
 @tool("lt_render_card")
 def lt_render_card(filename: str, headline: str, subline: str = "", tema_imagem: str = "") -> str:
     """Gera uma imagem 1080x1350 (feed IG/FB) com foto de fundo e título/subtítulo por cima.
+    Nos posts de oferta (post_tarde) o card também mostra o selo com o preço.
     Args: filename (ex: post_manha.png), headline (texto principal curto), subline (opcional),
     tema_imagem (2 a 4 palavras EM INGLÊS descrevendo a foto de fundo, ex: 'woman studying laptop')."""
     os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
@@ -62,16 +84,38 @@ def lt_render_card(filename: str, headline: str, subline: str = "", tema_imagem:
     else:
         img = fundo
     d = ImageDraw.Draw(img)
+    margem = 80
+    largura_max = W - 2 * margem  # nenhuma linha passa daqui
     d.rectangle([60, 60, 1020, 70], fill=(250, 204, 21))
+
+    # Título: reduz a fonte se precisar para caber em no máximo 4 linhas
     y = 300
-    for line in textwrap.wrap(headline, width=20):
-        d.text((80, y), line, font=_font(84), fill=(255, 255, 255))
-        y += 105
+    for tam in (84, 74, 64):
+        fonte_t = _font(tam)
+        linhas_t = _quebrar(d, headline, fonte_t, largura_max)
+        if len(linhas_t) <= 4:
+            break
+    for line in linhas_t:
+        d.text((margem, y), line, font=fonte_t, fill=(255, 255, 255))
+        y += int(tam * 1.25)
     y += 40
-    for line in textwrap.wrap(subline, width=34):
-        d.text((80, y), line, font=_font(46), fill=(226, 232, 240))
+    fonte_s = _font(46)
+    for line in _quebrar(d, subline, fonte_s, largura_max):
+        d.text((margem, y), line, font=fonte_s, fill=(226, 232, 240))
         y += 60
-    d.text((80, 1240), cfg.BRAND_HANDLE, font=_font(44), fill=(250, 204, 21))
+
+    # Selo de preço, só no post de oferta
+    slot = _slot_do_arquivo(filename)
+    if cfg.SLOTS.get(slot, {}).get("tipo") == "OFERTA":
+        x0, y0, x1, y1 = 600, 1110, 1000, 1290
+        d.rounded_rectangle([x0, y0, x1, y1], radius=32, fill=(250, 204, 21))
+        escuro = (15, 23, 42)
+        f_preco, f_cta = _font(72), _font(32)
+        preco = cfg.OFFER_PRICE
+        d.text(((x0 + x1) / 2, y0 + 70), preco, font=f_preco, fill=escuro, anchor="mm")
+        d.text(((x0 + x1) / 2, y0 + 138), "LINK NA BIO", font=f_cta, fill=escuro, anchor="mm")
+
+    d.text((margem, 1240), cfg.BRAND_HANDLE, font=_font(44), fill=(250, 204, 21))
     path = os.path.join(cfg.OUTPUT_DIR, filename)
     img.save(path, "JPEG" if path.lower().endswith((".jpg", ".jpeg")) else "PNG")
     origem = "com foto do Unsplash" if foto is not None else "fundo liso (sem foto)"
