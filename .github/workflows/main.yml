@@ -2,8 +2,12 @@ name: Executar Fabrica de Infoprodutos
 
 on:
   workflow_dispatch: # Permite disparar manualmente pelo painel do GitHub
+  schedule:name: Executar Fabrica de Infoprodutos
+
+on:
+  workflow_dispatch: # Permite disparar manualmente pelo painel do GitHub
   schedule:
-    - cron: '0 8,14,20 * * *' # Roda 3 vezes ao dia (8h, 14h e 20h UTC)
+    - cron: '0 17 * * *' # 1 vez ao dia (17h UTC = 14h Brasília)
 
 jobs:
   run-crew:
