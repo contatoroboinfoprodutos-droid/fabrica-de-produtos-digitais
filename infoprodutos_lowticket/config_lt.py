@@ -21,13 +21,15 @@ OFFER_LINK = os.getenv("LT_OFFER_LINK", "https://SEU-LINK-DE-CHECKOUT")
 NICHE = os.getenv("LT_NICHE", "infoprodutos digitais sobre assuntos diversos, sempre com temas atuais e em alta")
 
 # --- LLM (Gemini por padrão; OpenRouter como reserva; Groq opcional) ---
-# LT_LLM_PROVIDER=gemini (padrão), openrouter ou groq
+# LT_LLM_PROVIDER=gemini (padrão), groq ou openrouter
 LLM_PROVIDER = os.getenv("LT_LLM_PROVIDER", "gemini").strip().lower() or "gemini"
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "").strip() or "qwen/qwen3-coder:free"
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+GROQ_MODEL = os.getenv("GROQ_MODEL", "").strip() or "openai/gpt-oss-120b"
+GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 
 if LLM_PROVIDER == "openrouter":
     LLM_MODEL = OPENROUTER_MODEL
@@ -35,8 +37,8 @@ elif LLM_PROVIDER == "gemini":
     LLM_MODEL = (os.getenv("LT_LLM_MODEL", "").strip()
                  or os.getenv("GEMINI_MODEL", "").strip()
                  or "gemini/gemini-3.8-flash")
-else:
-    LLM_MODEL = os.getenv("LT_LLM_MODEL", "").strip() or "groq/llama-3.3-70b-versatile"
+else:  # groq (API compatível com a da OpenAI)
+    LLM_MODEL = GROQ_MODEL
 
 # --- Publicação ---
 DRY_RUN = os.getenv("LT_DRY_RUN", "true").lower() == "true"  # começa SEM publicar de verdade
