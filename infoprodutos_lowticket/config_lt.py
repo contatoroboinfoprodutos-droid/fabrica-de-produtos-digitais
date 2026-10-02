@@ -38,6 +38,20 @@ TIKTOK_ACCESS_TOKEN = os.getenv("LT_TIKTOK_ACCESS_TOKEN", "")
 PUBLIC_IMAGE_BASE_URL = os.getenv("LT_PUBLIC_IMAGE_BASE_URL", "").rstrip("/")
 OUTPUT_DIR = os.getenv("LT_OUTPUT_DIR", "output_lowticket")
 
+# --- Meta (Facebook + Instagram) reaproveitando os Secrets do robô principal ---
+META_TOKEN = os.getenv("META_LONG_LIVED_TOKEN", "")
+FB_PAGE_ID = os.getenv("FB_PAGE_ID", "")
+IG_ACCOUNT_ID = os.getenv("INSTAGRAM_ACCOUNT_ID", "") or IG_USER_ID
+GRAPH_VERSION = os.getenv("META_GRAPH_API_VERSION", "").strip() or "v26.0"
+META_CONFIGURADA = bool(META_TOKEN and FB_PAGE_ID and IG_ACCOUNT_ID)
+
+# --- Foto de fundo (Unsplash) ---
+UNSPLASH_API_KEY = os.getenv("UNSPLASH_API_KEY", "")
+UNSPLASH_QUERY_PADRAO = os.getenv("LT_UNSPLASH_QUERY", "learning laptop notebook")
+
+# TikTok só é usado se houver token E URL pública de imagens (exigência da API do TikTok)
+TIKTOK_ATIVO = bool(TIKTOK_ACCESS_TOKEN and PUBLIC_IMAGE_BASE_URL)
+
 # --- Roteiro diário ---
 SLOTS = {
     "manha": {
