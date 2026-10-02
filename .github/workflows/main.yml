@@ -2,12 +2,8 @@ name: Executar Fabrica de Infoprodutos
 
 on:
   workflow_dispatch: # Permite disparar manualmente pelo painel do GitHub
-  schedule:name: Executar Fabrica de Infoprodutos
-
-on:
-  workflow_dispatch: # Permite disparar manualmente pelo painel do GitHub
   schedule:
-    - cron: '0 17 * * *' # 1 vez ao dia (17h UTC = 14h Brasília)
+    - cron: '0 17 * * *' # 1 vez ao dia (17h UTC = 14h Brasilia)
 
 jobs:
   run-crew:
@@ -34,9 +30,9 @@ jobs:
           GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
         run: |
           # Testa o modelo principal; se estiver sobrecarregado (503) ou sem cota (429), usa o reserva.
-          PRIM="${GEMINI_MODEL:-gemini/gemini-3.8-flash}"; PRIM="${PRIM#gemini/}"
+          PRIM="${GEMINI_MODEL:-gemini/gemini-3.7-flash}"; PRIM="${PRIM#gemini/}"
           ESCOLHIDO="$PRIM"
-          for M in "$PRIM" gemini-3.7-flash; do
+          for M in "$PRIM" gemini-3.8-flash; do
             CODE=$(curl -s -o /dev/null -w "%{http_code}" -m 40 \
               -H "x-goog-api-key: $GEMINI_API_KEY" -H "Content-Type: application/json" \
               -d '{"contents":[{"parts":[{"text":"ok"}]}],"generationConfig":{"maxOutputTokens":5}}' \
@@ -46,6 +42,7 @@ jobs:
           done
           echo "Usando gemini/$ESCOLHIDO"
           echo "GEMINI_ESCOLHIDO=gemini/$ESCOLHIDO" >> $GITHUB_ENV
+
       - name: Executar Pipeline Principal
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}

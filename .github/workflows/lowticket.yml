@@ -56,10 +56,14 @@ jobs:
           echo "LT_LLM_MODEL=gemini/$ESCOLHIDO" >> $GITHUB_ENV
       - name: Executa o robô
         run: |
-          # Em simulação (LT_DRY_RUN=true) tenta até 3 vezes se o Gemini estiver sobrecarregado (503).
-          # Em modo real faz uma tentativa só, para nunca duplicar uma postagem.
+          # Em simulação (LT_DRY_RUN=true) tenta até 3 vezes, alternando entre os dois modelos Gemini
+          # se um estiver sobrecarregado (503). Em modo real faz uma tentativa só, para nunca duplicar uma postagem.
+          M1="$LT_LLM_MODEL"
+          if [ "$M1" = "gemini/gemini-3.8-flash" ]; then M2="gemini/gemini-3.7-flash"; else M2="gemini/gemini-3.8-flash"; fi
           if [ "${LT_DRY_RUN,,}" = "true" ]; then N=3; else N=1; fi
           for i in $(seq 1 $N); do
+            if [ $((i % 2)) -eq 0 ]; then export LT_LLM_MODEL="$M2"; else export LT_LLM_MODEL="$M1"; fi
+            echo "Tentativa $i de $N com $LT_LLM_MODEL"
             python -m infoprodutos_lowticket.run_lowticket --slot $SLOT && exit 0
             echo "Tentativa $i de $N falhou."
             [ $i -lt $N ] && sleep 60
