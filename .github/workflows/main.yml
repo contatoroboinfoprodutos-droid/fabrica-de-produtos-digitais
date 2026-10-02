@@ -24,14 +24,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Escolhe o modelo Gemini disponível
+      - name: Escolhe o provedor de IA (Gemini ou OpenRouter)
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
-          # Testa o modelo principal; se estiver sobrecarregado (503) ou sem cota (429), usa o reserva.
+          # Testa os modelos Gemini; se os dois estiverem sem cota (429) ou sobrecarregados (503), usa o OpenRouter.
           PRIM="${GEMINI_MODEL:-gemini/gemini-3.7-flash}"; PRIM="${PRIM#gemini/}"
-          ESCOLHIDO="$PRIM"
+          ESCOLHIDO=""
           for M in "$PRIM" gemini-3.8-flash; do
             CODE=$(curl -s -o /dev/null -w "%{http_code}" -m 40 \
               -H "x-goog-api-key: $GEMINI_API_KEY" -H "Content-Type: application/json" \
@@ -40,15 +41,28 @@ jobs:
             echo "Modelo $M respondeu HTTP $CODE"
             if [ "$CODE" = "200" ]; then ESCOLHIDO="$M"; break; fi
           done
-          echo "Usando gemini/$ESCOLHIDO"
+          if [ -n "$ESCOLHIDO" ]; then
+            echo "Usando Gemini: gemini/$ESCOLHIDO"
+            echo "PROVEDOR_ESCOLHIDO=gemini" >> $GITHUB_ENV
+          elif [ -n "$OPENROUTER_API_KEY" ]; then
+            echo "Gemini indisponivel; usando OpenRouter"
+            ESCOLHIDO="$PRIM"
+            echo "PROVEDOR_ESCOLHIDO=openrouter" >> $GITHUB_ENV
+          else
+            echo "Gemini indisponivel e sem chave OpenRouter; tentando o Gemini mesmo assim"
+            ESCOLHIDO="$PRIM"
+            echo "PROVEDOR_ESCOLHIDO=gemini" >> $GITHUB_ENV
+          fi
           echo "GEMINI_ESCOLHIDO=gemini/$ESCOLHIDO" >> $GITHUB_ENV
 
       - name: Executar Pipeline Principal
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          LLM_PROVIDER: ${{ secrets.LLM_PROVIDER || 'gemini' }}
+          LLM_PROVIDER: ${{ env.PROVEDOR_ESCOLHIDO || secrets.LLM_PROVIDER || 'gemini' }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: ${{ env.GEMINI_ESCOLHIDO || secrets.GEMINI_MODEL }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
           MODEL: ${{ secrets.MODEL }}
           PRODUTO_TOPICO: ${{ secrets.PRODUTO_TOPICO }}
           IMAGEM_PADRAO_URL: ${{ secrets.IMAGEM_PADRAO_URL }}
@@ -62,4 +76,17 @@ jobs:
           # Padrao seguro: simula (nao publica). Para publicar de verdade, crie o Secret DRY_RUN = false
           DRY_RUN: ${{ secrets.DRY_RUN || 'true' }}
         run: |
-          python main.py
+          # Em simulação, se der erro (429/503) tenta uma 2ª vez trocando de provedor.
+          # Em modo real faz uma tentativa só, para nunca duplicar uma postagem.
+          P1="$LLM_PROVIDER"
+          if [ "${DRY_RUN,,}" = "true" ]; then N=2; else N=1; fi
+          for i in $(seq 1 $N); do
+            if [ $i -eq 2 ]; then
+              if [ "$P1" = "openrouter" ]; then export LLM_PROVIDER=gemini; else export LLM_PROVIDER=openrouter; fi
+            fi
+            echo "Tentativa $i de $N com o provedor $LLM_PROVIDER"
+            python main.py && exit 0
+            echo "Tentativa $i de $N falhou."
+            [ $i -lt $N ] && sleep 30
+          done
+          exit 1

@@ -14,7 +14,8 @@ jobs:
     env:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
-      LT_LLM_PROVIDER: gemini
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
       LT_DRY_RUN: ${{ vars.LT_DRY_RUN || 'true' }}
       LT_IG_USER_ID: ${{ secrets.LT_IG_USER_ID }}
       LT_IG_ACCESS_TOKEN: ${{ secrets.LT_IG_ACCESS_TOKEN }}
@@ -35,14 +36,11 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then S="${{ github.event.inputs.slot }}";
           elif [ "${{ github.event.schedule }}" = "0 12 * * *" ]; then S=manha; else S=tarde; fi
           echo "SLOT=$S" >> $GITHUB_ENV
-      - name: Escolhe o modelo Gemini disponível
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
+      - name: Escolhe o provedor de IA (Gemini ou OpenRouter)
         run: |
-          # Testa o modelo principal; se estiver sobrecarregado (503) ou sem cota (429), usa o reserva.
+          # Testa os modelos Gemini; se os dois estiverem sem cota (429) ou sobrecarregados (503), usa o OpenRouter.
           PRIM="${GEMINI_MODEL:-gemini/gemini-3.8-flash}"; PRIM="${PRIM#gemini/}"
-          ESCOLHIDO="$PRIM"
+          ESCOLHIDO=""
           for M in "$PRIM" gemini-3.7-flash; do
             CODE=$(curl -s -o /dev/null -w "%{http_code}" -m 40 \
               -H "x-goog-api-key: $GEMINI_API_KEY" -H "Content-Type: application/json" \
@@ -51,22 +49,37 @@ jobs:
             echo "Modelo $M respondeu HTTP $CODE"
             if [ "$CODE" = "200" ]; then ESCOLHIDO="$M"; break; fi
           done
-          echo "Usando gemini/$ESCOLHIDO"
-          echo "GEMINI_ESCOLHIDO=gemini/$ESCOLHIDO" >> $GITHUB_ENV
+          if [ -n "$ESCOLHIDO" ]; then
+            echo "Usando Gemini: gemini/$ESCOLHIDO"
+            echo "LT_LLM_PROVIDER=gemini" >> $GITHUB_ENV
+          elif [ -n "$OPENROUTER_API_KEY" ]; then
+            echo "Gemini indisponivel; usando OpenRouter"
+            ESCOLHIDO="$PRIM"
+            echo "LT_LLM_PROVIDER=openrouter" >> $GITHUB_ENV
+          else
+            echo "Gemini indisponivel e sem chave OpenRouter; tentando o Gemini mesmo assim"
+            ESCOLHIDO="$PRIM"
+            echo "LT_LLM_PROVIDER=gemini" >> $GITHUB_ENV
+          fi
           echo "LT_LLM_MODEL=gemini/$ESCOLHIDO" >> $GITHUB_ENV
       - name: Executa o robô
         run: |
-          # Em simulação (LT_DRY_RUN=true) tenta até 3 vezes, alternando entre os dois modelos Gemini
-          # se um estiver sobrecarregado (503). Em modo real faz uma tentativa só, para nunca duplicar uma postagem.
-          M1="$LT_LLM_MODEL"
-          if [ "$M1" = "gemini/gemini-3.8-flash" ]; then M2="gemini/gemini-3.7-flash"; else M2="gemini/gemini-3.8-flash"; fi
+          # Em simulação (LT_DRY_RUN=true) tenta até 3 vezes, trocando de provedor/modelo se der 429 ou 503.
+          # Em modo real faz uma tentativa só, para nunca duplicar uma postagem.
+          P1="$LT_LLM_PROVIDER"; G1="$LT_LLM_MODEL"
+          if [ "$G1" = "gemini/gemini-3.8-flash" ]; then G2="gemini/gemini-3.7-flash"; else G2="gemini/gemini-3.8-flash"; fi
           if [ "${LT_DRY_RUN,,}" = "true" ]; then N=3; else N=1; fi
           for i in $(seq 1 $N); do
-            if [ $((i % 2)) -eq 0 ]; then export LT_LLM_MODEL="$M2"; else export LT_LLM_MODEL="$M1"; fi
-            echo "Tentativa $i de $N com $LT_LLM_MODEL"
+            case "$i" in
+              1) PROV="$P1"; MOD="$G1" ;;
+              2) if [ "$P1" = "gemini" ]; then PROV=openrouter; else PROV=gemini; fi; MOD="$G1" ;;
+              *) PROV=gemini; MOD="$G2" ;;
+            esac
+            export LT_LLM_PROVIDER="$PROV"; export LT_LLM_MODEL="$MOD"
+            echo "Tentativa $i de $N com $PROV ($MOD)"
             python -m infoprodutos_lowticket.run_lowticket --slot $SLOT && exit 0
             echo "Tentativa $i de $N falhou."
-            [ $i -lt $N ] && sleep 60
+            [ $i -lt $N ] && sleep 45
           done
           exit 1
       - name: Guarda a imagem gerada (baixe na página da execução)
