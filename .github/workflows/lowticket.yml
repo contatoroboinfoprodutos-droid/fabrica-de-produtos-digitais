@@ -35,4 +35,22 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then S="${{ github.event.inputs.slot }}";
           elif [ "${{ github.event.schedule }}" = "0 12 * * *" ]; then S=manha; else S=tarde; fi
           echo "SLOT=$S" >> $GITHUB_ENV
-      - run: python -m infoprodutos_lowticket.run_lowticket --slot $SLOT
+      - name: Executa o robô
+        run: |
+          # Em simulação (LT_DRY_RUN=true) tenta até 3 vezes se o Gemini estiver sobrecarregado (503).
+          # Em modo real faz uma tentativa só, para nunca duplicar uma postagem.
+          if [ "${LT_DRY_RUN,,}" = "true" ]; then N=3; else N=1; fi
+          for i in $(seq 1 $N); do
+            python -m infoprodutos_lowticket.run_lowticket --slot $SLOT && exit 0
+            echo "Tentativa $i de $N falhou."
+            [ $i -lt $N ] && sleep 60
+          done
+          exit 1
+      - name: Guarda a imagem gerada (baixe na página da execução)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: card-${{ env.SLOT }}
+          path: output_lowticket/
+          if-no-files-found: ignore
+          retention-days: 7
