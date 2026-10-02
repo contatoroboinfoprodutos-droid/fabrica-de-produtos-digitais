@@ -14,6 +14,8 @@ jobs:
     env:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      GROQ_MODEL: ${{ vars.GROQ_MODEL }}
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
       LT_DRY_RUN: ${{ vars.LT_DRY_RUN || 'true' }}
@@ -36,9 +38,9 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then S="${{ github.event.inputs.slot }}";
           elif [ "${{ github.event.schedule }}" = "0 12 * * *" ]; then S=manha; else S=tarde; fi
           echo "SLOT=$S" >> $GITHUB_ENV
-      - name: Escolhe o provedor de IA (Gemini ou OpenRouter)
+      - name: Escolhe o provedor de IA (Gemini, Groq ou OpenRouter)
         run: |
-          # Testa os modelos Gemini; se os dois estiverem sem cota (429) ou sobrecarregados (503), usa o OpenRouter.
+          # 1) Gemini (dois modelos). 2) Se falharem (429/503): Groq. 3) Depois: OpenRouter.
           PRIM="${GEMINI_MODEL:-gemini/gemini-3.8-flash}"; PRIM="${PRIM#gemini/}"
           ESCOLHIDO=""
           for M in "$PRIM" gemini-3.7-flash; do
@@ -49,37 +51,49 @@ jobs:
             echo "Modelo $M respondeu HTTP $CODE"
             if [ "$CODE" = "200" ]; then ESCOLHIDO="$M"; break; fi
           done
+          PROV=""
           if [ -n "$ESCOLHIDO" ]; then
-            echo "Usando Gemini: gemini/$ESCOLHIDO"
-            echo "LT_LLM_PROVIDER=gemini" >> $GITHUB_ENV
-          elif [ -n "$OPENROUTER_API_KEY" ]; then
-            echo "Gemini indisponivel; usando OpenRouter"
-            ESCOLHIDO="$PRIM"
-            echo "LT_LLM_PROVIDER=openrouter" >> $GITHUB_ENV
+            PROV=gemini
           else
-            echo "Gemini indisponivel e sem chave OpenRouter; tentando o Gemini mesmo assim"
+            if [ -n "$GROQ_API_KEY" ]; then
+              GCODE=$(curl -s -o /dev/null -w "%{http_code}" -m 40 https://api.groq.com/openai/v1/chat/completions \
+                -H "Authorization: Bearer $GROQ_API_KEY" -H "Content-Type: application/json" \
+                -d '{"model":"openai/gpt-oss-120b","messages":[{"role":"user","content":"ok"}],"max_tokens":16}')
+              echo "Groq respondeu HTTP $GCODE"
+              if [ "$GCODE" = "200" ]; then PROV=groq; fi
+            fi
+            if [ -z "$PROV" ] && [ -n "$OPENROUTER_API_KEY" ]; then PROV=openrouter; fi
+            if [ -z "$PROV" ]; then PROV=gemini; fi
             ESCOLHIDO="$PRIM"
-            echo "LT_LLM_PROVIDER=gemini" >> $GITHUB_ENV
           fi
+          echo "Provedor escolhido: $PROV"
+          echo "LT_LLM_PROVIDER=$PROV" >> $GITHUB_ENV
           echo "LT_LLM_MODEL=gemini/$ESCOLHIDO" >> $GITHUB_ENV
+
       - name: Executa o robô
         run: |
-          # Em simulação (LT_DRY_RUN=true) tenta até 3 vezes, trocando de provedor/modelo se der 429 ou 503.
+          # Em simulação (LT_DRY_RUN=true) tenta até 3 vezes, trocando de provedor se der 429 ou 503.
           # Em modo real faz uma tentativa só, para nunca duplicar uma postagem.
           P1="$LT_LLM_PROVIDER"; G1="$LT_LLM_MODEL"
           if [ "$G1" = "gemini/gemini-3.8-flash" ]; then G2="gemini/gemini-3.7-flash"; else G2="gemini/gemini-3.8-flash"; fi
+          ORDER="$P1"
+          for P in gemini groq openrouter gemini2; do
+            [ "$P" = "$P1" ] && continue
+            if [ "$P" = "groq" ] && [ -z "$GROQ_API_KEY" ]; then continue; fi
+            if [ "$P" = "openrouter" ] && [ -z "$OPENROUTER_API_KEY" ]; then continue; fi
+            ORDER="$ORDER $P"
+          done
           if [ "${LT_DRY_RUN,,}" = "true" ]; then N=3; else N=1; fi
           for i in $(seq 1 $N); do
-            case "$i" in
-              1) PROV="$P1"; MOD="$G1" ;;
-              2) if [ "$P1" = "gemini" ]; then PROV=openrouter; else PROV=gemini; fi; MOD="$G1" ;;
-              *) PROV=gemini; MOD="$G2" ;;
-            esac
+            PROV=$(echo $ORDER | cut -d' ' -f$i)
+            if [ -z "$PROV" ]; then break; fi
+            MOD="$G1"
+            if [ "$PROV" = "gemini2" ]; then PROV=gemini; MOD="$G2"; fi
             export LT_LLM_PROVIDER="$PROV"; export LT_LLM_MODEL="$MOD"
-            echo "Tentativa $i de $N com $PROV ($MOD)"
+            echo "Tentativa $i de $N com $PROV"
             python -m infoprodutos_lowticket.run_lowticket --slot $SLOT && exit 0
             echo "Tentativa $i de $N falhou."
-            [ $i -lt $N ] && sleep 45
+            if [ $i -lt $N ]; then sleep 45; fi
           done
           exit 1
       - name: Guarda a imagem gerada (baixe na página da execução)

@@ -24,13 +24,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Escolhe o provedor de IA (Gemini ou OpenRouter)
+      - name: Escolhe o provedor de IA (Gemini, Groq ou OpenRouter)
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
-          # Testa os modelos Gemini; se os dois estiverem sem cota (429) ou sobrecarregados (503), usa o OpenRouter.
+          # 1) Gemini (dois modelos). 2) Se falharem (429/503): Groq. 3) Depois: OpenRouter.
           PRIM="${GEMINI_MODEL:-gemini/gemini-3.7-flash}"; PRIM="${PRIM#gemini/}"
           ESCOLHIDO=""
           for M in "$PRIM" gemini-3.8-flash; do
@@ -41,18 +42,23 @@ jobs:
             echo "Modelo $M respondeu HTTP $CODE"
             if [ "$CODE" = "200" ]; then ESCOLHIDO="$M"; break; fi
           done
+          PROV=""
           if [ -n "$ESCOLHIDO" ]; then
-            echo "Usando Gemini: gemini/$ESCOLHIDO"
-            echo "PROVEDOR_ESCOLHIDO=gemini" >> $GITHUB_ENV
-          elif [ -n "$OPENROUTER_API_KEY" ]; then
-            echo "Gemini indisponivel; usando OpenRouter"
-            ESCOLHIDO="$PRIM"
-            echo "PROVEDOR_ESCOLHIDO=openrouter" >> $GITHUB_ENV
+            PROV=gemini
           else
-            echo "Gemini indisponivel e sem chave OpenRouter; tentando o Gemini mesmo assim"
+            if [ -n "$GROQ_API_KEY" ]; then
+              GCODE=$(curl -s -o /dev/null -w "%{http_code}" -m 40 https://api.groq.com/openai/v1/chat/completions \
+                -H "Authorization: Bearer $GROQ_API_KEY" -H "Content-Type: application/json" \
+                -d '{"model":"openai/gpt-oss-120b","messages":[{"role":"user","content":"ok"}],"max_tokens":16}')
+              echo "Groq respondeu HTTP $GCODE"
+              if [ "$GCODE" = "200" ]; then PROV=groq; fi
+            fi
+            if [ -z "$PROV" ] && [ -n "$OPENROUTER_API_KEY" ]; then PROV=openrouter; fi
+            if [ -z "$PROV" ]; then PROV=gemini; fi
             ESCOLHIDO="$PRIM"
-            echo "PROVEDOR_ESCOLHIDO=gemini" >> $GITHUB_ENV
           fi
+          echo "Provedor escolhido: $PROV"
+          echo "PROVEDOR_ESCOLHIDO=$PROV" >> $GITHUB_ENV
           echo "GEMINI_ESCOLHIDO=gemini/$ESCOLHIDO" >> $GITHUB_ENV
 
       - name: Executar Pipeline Principal
@@ -76,17 +82,24 @@ jobs:
           # Padrao seguro: simula (nao publica). Para publicar de verdade, crie o Secret DRY_RUN = false
           DRY_RUN: ${{ secrets.DRY_RUN || 'true' }}
         run: |
-          # Em simulação, se der erro (429/503) tenta uma 2ª vez trocando de provedor.
+          # Em simulação, se der erro (429/503) tenta de novo com outro provedor (até 3 tentativas).
           # Em modo real faz uma tentativa só, para nunca duplicar uma postagem.
           P1="$LLM_PROVIDER"
-          if [ "${DRY_RUN,,}" = "true" ]; then N=2; else N=1; fi
+          ORDER="$P1"
+          for P in gemini groq openrouter; do
+            [ "$P" = "$P1" ] && continue
+            if [ "$P" = "groq" ] && [ -z "$GROQ_API_KEY" ]; then continue; fi
+            if [ "$P" = "openrouter" ] && [ -z "$OPENROUTER_API_KEY" ]; then continue; fi
+            ORDER="$ORDER $P"
+          done
+          if [ "${DRY_RUN,,}" = "true" ]; then N=3; else N=1; fi
           for i in $(seq 1 $N); do
-            if [ $i -eq 2 ]; then
-              if [ "$P1" = "openrouter" ]; then export LLM_PROVIDER=gemini; else export LLM_PROVIDER=openrouter; fi
-            fi
-            echo "Tentativa $i de $N com o provedor $LLM_PROVIDER"
+            PROV=$(echo $ORDER | cut -d' ' -f$i)
+            if [ -z "$PROV" ]; then break; fi
+            export LLM_PROVIDER="$PROV"
+            echo "Tentativa $i de $N com o provedor $PROV"
             python main.py && exit 0
             echo "Tentativa $i de $N falhou."
-            [ $i -lt $N ] && sleep 30
+            if [ $i -lt $N ]; then sleep 30; fi
           done
           exit 1
