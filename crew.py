@@ -3,6 +3,9 @@ Monta o Crew da Infoproduct Factory a partir de config/agents.yaml e
 config/tasks.yaml (padrão @CrewBase do CrewAI) — integrando com o Groq
 (primário) e Gemini (fallback automático) para tolerar Rate Limit e
 falhas de conexão sem derrubar o pipeline.
+
+Provedores aceitos em LLM_PROVIDER: "gemini", "openrouter" ou "groq".
+O workflow escolhe o provedor disponível antes de rodar.
 """
 import re
 import time
@@ -121,7 +124,22 @@ class GroqWithGeminiFailoverLLM(LLM):
 
 def get_llm() -> LLM:
     settings = get_settings()
-    if (settings.llm_provider or '').strip().lower() == 'gemini' or not settings.groq_api_key:
+    provider = (settings.llm_provider or '').strip().lower()
+
+    # OpenRouter: compatível com a API da OpenAI. O prefixo "openai/" + base_url
+    # funciona em qualquer versão do CrewAI (nativa ou via LiteLLM).
+    if provider == 'openrouter':
+        if not settings.openrouter_api_key:
+            raise RuntimeError('OPENROUTER_API_KEY não configurada (LLM_PROVIDER=openrouter).')
+        return LLM(
+            model="openai/" + settings.openrouter_model,
+            base_url="https://openrouter.ai/api/v1",
+            api_key=settings.openrouter_api_key,
+            temperature=0.7,
+            max_tokens=2048,
+        )
+
+    if provider == 'gemini' or not settings.groq_api_key:
         if not settings.gemini_api_key:
             raise RuntimeError('GEMINI_API_KEY não configurada (LLM_PROVIDER=gemini).')
         return LLM(
