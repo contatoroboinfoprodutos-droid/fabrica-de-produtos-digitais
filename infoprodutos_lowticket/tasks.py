@@ -21,7 +21,8 @@ def build_lt_tasks(slot: str):
                      f"2) SUBLINE (máx 100 caracteres)\n3) LEGENDA (até 900 caracteres, com 5 hashtags)\n"
                      "4) TEMA_IMAGEM: 2 a 4 palavras EM INGLÊS que descrevam uma foto de fundo "
                      "relacionada ao tema (ex.: 'woman studying laptop'). Evite pessoas famosas, marcas e textos.\n"
-                     f"{extra}\nSem promessa de ganho garantido."),
+                     f"{extra}\nSem promessa de ganho garantido. "
+                     "A LEGENDA deve ser texto puro: sem markdown (nada de ** ou *), sem colchetes e sem links inventados."),
         expected_output="HEADLINE, SUBLINE, LEGENDA e TEMA_IMAGEM rotulados.",
         agent=copywriter_lowticket_agent, context=[lt_task_pesquisa])
 

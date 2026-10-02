@@ -17,7 +17,7 @@ BRAND_TONE = "direto, prático, humano, sem promessas de enriquecimento fácil"
 
 # --- Produto ---
 OFFER_PRICE = "R$ 7,00"
-OFFER_LINK = os.getenv("LT_OFFER_LINK", "https://SEU-LINK-DE-CHECKOUT")
+OFFER_LINK = os.getenv("LT_OFFER_LINK", "").strip() or "https://SEU-LINK-DE-CHECKOUT"  # vazio no workflow = sem link real
 NICHE = os.getenv("LT_NICHE", "infoprodutos digitais sobre assuntos diversos, sempre com temas atuais e em alta")
 
 # --- LLM (Gemini por padrão; OpenRouter como reserva; Groq opcional) ---

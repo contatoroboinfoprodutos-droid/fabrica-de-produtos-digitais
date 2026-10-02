@@ -3,6 +3,7 @@ import io
 import logging
 import os
 import random
+import re
 import textwrap
 import time
 
@@ -139,15 +140,36 @@ def _page_token():
     raise RuntimeError("FB_PAGE_ID não encontrado nas páginas do token (confira o ID e as permissões).")
 
 
+def _limpar_legenda(texto):
+    """Facebook/Instagram não entendem markdown: remove os asteriscos (**negrito**, *itálico*)."""
+    return re.sub(r"\*+", "", texto or "").strip()
+
+
+def _problema_do_link(filename, caption):
+    """Em posts de OFERTA a legenda precisa conter o link real (LT_OFFER_LINK). Devolve o motivo ou ''."""
+    if cfg.SLOTS.get(_slot_do_arquivo(filename), {}).get("tipo") != "OFERTA":
+        return ""
+    if PLACEHOLDER_LINK in cfg.OFFER_LINK or not cfg.OFFER_LINK.startswith("http"):
+        return "a variável LT_OFFER_LINK não está definida com o link real de compra."
+    if cfg.OFFER_LINK not in caption:
+        return "a legenda não contém o link real (LT_OFFER_LINK); o agente pode ter inventado outro link."
+    return ""
+
+
 @tool("lt_publicar_meta")
 def lt_publicar_meta(filename: str, caption: str) -> str:
     """Publica a imagem gerada por lt_render_card na página do Facebook e no Instagram.
     Args: filename (arquivo gerado, ex: post_manha.png), caption (legenda final)."""
+    caption = _limpar_legenda(caption)
+    problema = _problema_do_link(filename, caption)
     if cfg.DRY_RUN:
+        aviso = f"\n[AVISO] Em modo real esta publicação seria BLOQUEADA: {problema}" if problema else ""
         return (f"[DRY_RUN] Facebook e Instagram NÃO publicados. Arquivo={filename}\n"
-                f"Legenda:\n{caption}")
+                f"Legenda:\n{caption}{aviso}")
     if PLACEHOLDER_LINK in caption:
         return "ERRO: a legenda contém o link de exemplo. Defina a variável LT_OFFER_LINK com o link real."
+    if problema:
+        return f"ERRO: publicação bloqueada: {problema}"
     if not cfg.META_CONFIGURADA:
         return "ERRO: defina META_LONG_LIVED_TOKEN, FB_PAGE_ID e INSTAGRAM_ACCOUNT_ID."
     path = os.path.join(cfg.OUTPUT_DIR, filename)
