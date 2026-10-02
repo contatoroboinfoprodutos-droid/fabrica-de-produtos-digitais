@@ -1,6 +1,6 @@
 from crewai import Agent, LLM
 from . import config_lt as cfg
-from .tools_lt import lt_render_card, lt_publicar_instagram, lt_publicar_tiktok
+from .tools_lt import lt_render_card, lt_publicar_meta, lt_publicar_tiktok
 
 _api_key = cfg.GEMINI_API_KEY if cfg.LLM_PROVIDER == "gemini" else cfg.GROQ_API_KEY
 if not _api_key:
@@ -22,13 +22,13 @@ copywriter_lowticket_agent = Agent(
 
 visual_director_agent = Agent(
     role="Diretor visual de imagens fixas",
-    goal="Transformar o copy em um card visual limpo e gerar o arquivo de imagem.",
+    goal="Transformar o copy em um card visual limpo, com foto de fundo, e gerar o arquivo de imagem.",
     backstory="Designer de posts estáticos: título curto, contraste alto, identidade consistente entre Instagram e TikTok.",
     tools=[lt_render_card], llm=_llm, allow_delegation=False, verbose=True)
 
 publisher_infoproduto_agent = Agent(
     role="Publicador de infoprodutos",
-    goal="Publicar o post aprovado no Instagram e no TikTok e reportar o resultado de cada um.",
+    goal="Publicar o post aprovado no Facebook e no Instagram (e no TikTok, se configurado) e reportar o resultado de cada um.",
     backstory="Operador de publicação. Só publica o que recebeu pronto e reporta erros com clareza.",
-    tools=[lt_publicar_instagram, lt_publicar_tiktok],
+    tools=[lt_publicar_meta] + ([lt_publicar_tiktok] if cfg.TIKTOK_ATIVO else []),
     llm=_llm, allow_delegation=False, verbose=True)
