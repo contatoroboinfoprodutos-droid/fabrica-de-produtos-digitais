@@ -1,1 +1,171 @@
+name: Renovar token da Meta
 
+# Roda no dia 1 e no dia 15 de cada mês (06:00 UTC = 03:00 Brasília) e também manualmente.
+# Obs.: o cron não sabe "a cada 50 dias" ('*/50' no campo do dia vale só o dia 1).
+# Duas execuções por mês mantêm o token sempre bem dentro dos ~60 dias de validade
+# e dão uma segunda chance se uma execução falhar.
+on:
+  schedule:
+    - cron: '0 6 1,15 * *'
+  workflow_dispatch:
+
+# Pedido: contents e actions com escrita. ATENÇÃO: estas permissões são do GITHUB_TOKEN
+# e NÃO permitem gravar Secrets. Quem grava o Secret é o token pessoal (GH_SECRETS_TOKEN
+# ou GH_MODELS_KEY), usado na etapa abaixo.
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: renovar-token-meta
+  cancel-in-progress: false
+
+jobs:
+  renovar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Renova o token e atualiza o Secret META_LONG_LIVED_TOKEN
+        env:
+          GRAPH_VERSION: ${{ vars.META_GRAPH_API_VERSION || 'v26.0' }}
+          REPO: ${{ github.repository }}
+          META_APP_ID: ${{ secrets.META_APP_ID }}
+          META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
+          META_LONG_LIVED_TOKEN: ${{ secrets.META_LONG_LIVED_TOKEN }}
+          # Opcional, só para começar do zero (veja as instruções): token curto gerado no Graph API Explorer.
+          META_SHORT_LIVED_TOKEN: ${{ secrets.META_SHORT_LIVED_TOKEN }}
+          # Token pessoal com permissão de ESCREVER Secrets neste repositório.
+          GH_TOKEN: ${{ secrets.GH_SECRETS_TOKEN || secrets.GH_MODELS_KEY }}
+        run: |
+          set -euo pipefail
+
+          falhar() { echo "::error::$1"; exit 1; }
+
+          [ -n "${META_APP_ID:-}" ]     || falhar "Secret META_APP_ID não encontrado."
+          [ -n "${META_APP_SECRET:-}" ] || falhar "Secret META_APP_SECRET não encontrado."
+          [ -n "${GH_TOKEN:-}" ]        || falhar "Nenhum token do GitHub encontrado (GH_SECRETS_TOKEN ou GH_MODELS_KEY)."
+
+          API="https://graph.facebook.com/${GRAPH_VERSION}"
+          APP_TOKEN="${META_APP_ID}|${META_APP_SECRET}"
+          echo "::add-mask::${APP_TOKEN}"
+
+          # Origem do token: o atual (renovação) ou, se existir, o token curto (primeiro uso).
+          SRC="${META_LONG_LIVED_TOKEN:-}"
+          RENOVACAO=true
+          if [ -n "${META_SHORT_LIVED_TOKEN:-}" ]; then
+            SRC="$META_SHORT_LIVED_TOKEN"
+            RENOVACAO=false
+            echo "Modo: primeiro token (a partir de META_SHORT_LIVED_TOKEN)."
+          else
+            echo "Modo: renovação do token atual."
+          fi
+          [ -n "$SRC" ] || falhar "Não há token de origem (META_LONG_LIVED_TOKEN vazio e sem META_SHORT_LIVED_TOKEN)."
+
+          inspecionar() {
+            curl -sS --max-time 30 -G "${API}/debug_token" \
+              --data-urlencode "input_token=$1" \
+              --data-urlencode "access_token=${APP_TOKEN}"
+          }
+          data_legivel() { date -u -d "@$1" '+%d/%m/%Y %H:%M UTC'; }
+
+          # 1) Situação do token atual (só para comparar depois).
+          OLD_VALID=false
+          OLD_EXP=0
+          if [ -n "${META_LONG_LIVED_TOKEN:-}" ]; then
+            OLD_JSON="$(inspecionar "$META_LONG_LIVED_TOKEN" || true)"
+            OLD_VALID="$(jq -r '.data.is_valid // false' <<<"$OLD_JSON" 2>/dev/null || echo false)"
+            OLD_EXP="$(jq -r '.data.expires_at // 0' <<<"$OLD_JSON" 2>/dev/null || echo 0)"
+            if [ "$OLD_VALID" = "true" ] && [ "$OLD_EXP" -gt 0 ]; then
+              echo "Token atual: válido, expira em $(data_legivel "$OLD_EXP")."
+            else
+              echo "Token atual: inválido ou expirado."
+            fi
+          fi
+
+          # 2) Pede à Meta o token novo (os valores nunca são impressos).
+          RESP="$(curl -sS --max-time 30 -G "${API}/oauth/access_token" \
+            --data-urlencode "grant_type=fb_exchange_token" \
+            --data-urlencode "client_id=${META_APP_ID}" \
+            --data-urlencode "client_secret=${META_APP_SECRET}" \
+            --data-urlencode "fb_exchange_token=${SRC}")"
+
+          # 3) Extrai o token novo e mascara no log imediatamente.
+          NEW="$(jq -r '.access_token // empty' <<<"$RESP" 2>/dev/null || true)"
+          if [ -n "$NEW" ]; then
+            echo "::add-mask::${NEW}"
+          fi
+
+          # 4) Valida que veio um token de verdade.
+          if [ -z "$NEW" ] || [ "$NEW" = "null" ] || [ "${#NEW}" -lt 40 ]; then
+            COD="$(jq -r '.error.code // "?"' <<<"$RESP" 2>/dev/null || echo '?')"
+            MSG="$(jq -r '.error.message // "resposta inesperada da Meta"' <<<"$RESP" 2>/dev/null || echo 'resposta inesperada da Meta')"
+            if [ "$COD" = "190" ]; then
+              falhar "A Meta recusou o token (código 190: $MSG). Token expirado não pode ser renovado: gere um novo manualmente (veja as instruções) e rode este workflow de novo."
+            fi
+            falhar "A Meta não devolveu um token novo (código $COD: $MSG)."
+          fi
+
+          # 5) Confere o token novo com a Meta (debug_token) ANTES de sobrescrever o Secret.
+          NEW_JSON="$(inspecionar "$NEW")"
+          NEW_VALID="$(jq -r '.data.is_valid // false' <<<"$NEW_JSON" 2>/dev/null || echo false)"
+          [ "$NEW_VALID" = "true" ] || falhar "A Meta diz que o token novo não é válido. O Secret NÃO foi alterado."
+          NEW_EXP="$(jq -r '.data.expires_at // 0' <<<"$NEW_JSON")"
+          NEW_DATA_EXP="$(jq -r '.data.data_access_expires_at // 0' <<<"$NEW_JSON")"
+          NEW_TYPE="$(jq -r '.data.type // "?"' <<<"$NEW_JSON")"
+          NEW_SCOPES="$(jq -r '(.data.scopes // []) | join(", ")' <<<"$NEW_JSON")"
+
+          # 6) Só sobrescreve se a validade realmente aumentou (nunca piora a situação).
+          ATUALIZAR=true
+          if [ "$RENOVACAO" = true ] && [ "$OLD_VALID" = "true" ] && [ "$OLD_EXP" -gt 0 ] \
+             && [ "$NEW_EXP" -gt 0 ] && [ "$NEW_EXP" -le $((OLD_EXP + 3600)) ]; then
+            ATUALIZAR=false
+            echo "::warning::A Meta devolveu um token com a mesma validade (expira em $(data_legivel "$NEW_EXP")). O Secret NÃO foi alterado. Se isso se repetir, gere um token novo manualmente antes dessa data."
+          fi
+
+          if [ "$ATUALIZAR" = true ]; then
+            ERRO_GH="${RUNNER_TEMP}/gh_erro.txt"
+            if ! printf '%s' "$NEW" | gh secret set META_LONG_LIVED_TOKEN --repo "$REPO" 2>"$ERRO_GH"; then
+              echo "Resposta do GitHub:"; cat "$ERRO_GH" || true
+              falhar "Não consegui gravar o Secret. O token do GitHub (GH_SECRETS_TOKEN / GH_MODELS_KEY) precisa de permissão de escrita em Secrets: classic com escopo 'repo', ou fine-grained com 'Secrets: Read and write' neste repositório."
+            fi
+            echo "Secret META_LONG_LIVED_TOKEN atualizado."
+            gh secret list --repo "$REPO" --json name,updatedAt \
+              --jq '.[] | select(.name=="META_LONG_LIVED_TOKEN") | "Confirmação: \(.name) atualizado em \(.updatedAt)"' || true
+            ATIVO_EXP="$NEW_EXP"
+            # Primeiro uso: o token curto já cumpriu o papel, então apaga o Secret temporário.
+            if [ "$RENOVACAO" = false ]; then
+              gh secret delete META_SHORT_LIVED_TOKEN --repo "$REPO" \
+                || echo "::warning::Apague manualmente o Secret META_SHORT_LIVED_TOKEN."
+            fi
+          else
+            ATIVO_EXP="$OLD_EXP"
+          fi
+
+          # 7) Log de sucesso com a validade (sem imprimir o token).
+          NOW="$(date +%s)"
+          {
+            echo "### Token da Meta"
+            echo "- Tipo: ${NEW_TYPE}"
+            echo "- Permissões: ${NEW_SCOPES}"
+            if [ "$NEW_EXP" -gt 0 ]; then
+              echo "- Token novo expira em: $(data_legivel "$NEW_EXP") (faltam $(( (NEW_EXP - NOW) / 86400 )) dias)"
+            else
+              echo "- Token novo: sem data de expiração"
+            fi
+            if [ "$NEW_DATA_EXP" -gt 0 ]; then
+              echo "- Acesso a dados expira em: $(data_legivel "$NEW_DATA_EXP")"
+            fi
+            echo "- Secret atualizado: ${ATUALIZAR}"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+          # 8) Alarme: se o token em uso vence em 15 dias ou menos, a execução fica vermelha
+          #    (o GitHub avisa por e-mail) para você renovar manualmente a tempo.
+          if [ "$ATIVO_EXP" -gt 0 ]; then
+            RESTANTE=$(( (ATIVO_EXP - NOW) / 86400 ))
+            if [ "$RESTANTE" -le 15 ]; then
+              falhar "O token em uso vence em ${RESTANTE} dia(s). Gere um novo manualmente."
+            fi
+            echo "OK: token válido por mais ${RESTANTE} dia(s)."
+          else
+            echo "OK: token sem data de expiração."
+          fi
