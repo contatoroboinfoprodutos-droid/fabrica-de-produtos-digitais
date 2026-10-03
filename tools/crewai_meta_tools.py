@@ -10,6 +10,7 @@ from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 
 from tools.meta_graph_api import MetaGraphAPI, MetaGraphAPIError
+from config import get_settings
 
 
 # ---------------------------------------------------------------------- #
@@ -36,6 +37,12 @@ class PublishToFacebookTool(BaseTool):
     args_schema: Type[BaseModel] = FacebookPostInput
 
     def _run(self, message: str, link: Optional[str] = None, image_url: Optional[str] = None) -> str:
+        # Simulação: sai ANTES de qualquer chamada de rede à Meta.
+        if get_settings().dry_run:
+            return (
+                "[DRY_RUN] Facebook NÃO publicado (nenhuma chamada foi feita à Meta). "
+                f"image_url={image_url!r} message={message!r}"
+            )
         api = MetaGraphAPI()
         try:
             result = api.publish_facebook_post(message=message, link=link, image_url=image_url)
@@ -63,6 +70,12 @@ class PublishToInstagramTool(BaseTool):
     args_schema: Type[BaseModel] = InstagramPostInput
 
     def _run(self, image_url: str, caption: str) -> str:
+        # Simulação: sai ANTES de qualquer chamada de rede à Meta.
+        if get_settings().dry_run:
+            return (
+                "[DRY_RUN] Instagram NÃO publicado (nenhuma chamada foi feita à Meta). "
+                f"image_url={image_url!r} caption={caption!r}"
+            )
         api = MetaGraphAPI()
         try:
             result = api.publish_instagram_post(image_url=image_url, caption=caption)
