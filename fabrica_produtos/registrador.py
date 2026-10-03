@@ -30,22 +30,25 @@ def pacote_dir(produto: dict) -> str:
 def _ficha(produto: dict, pdf_nome: str) -> str:
     itens = "\n".join(f"- {c}" for c in produto.get("conteudos") or [])
     return (
-        f"# Ficha de cadastro: {produto['nome']}\n\n"
-        f"Produto do catálogo `{produto['id']}`. Cadastre nas plataformas com os dados abaixo.\n\n"
-        f"**Use exatamente este NOME**: o robô encontra o produto pelo nome, sem diferença de acento ou "
-        f"maiúscula, e então libera o anúncio sozinho.\n\n"
+        f"# Ficha do produto: {produto['nome']}\n\n"
+        f"Produto do catálogo `{produto['id']}`.\n\n"
+        f"Se a criação por API estiver ligada (`FABRICA_DRY_RUN=false`), o produto já foi criado na Cakto "
+        f"com estes dados e está em `waiting_config`. Se não, cadastre-o na Cakto com estes dados.\n\n"
+        f"**O NOME precisa ficar exatamente assim**: o robô encontra o produto pelo nome (sem diferença de "
+        f"acento ou maiúscula) e então libera o anúncio sozinho.\n\n"
         f"- Nome: {produto['nome']}\n"
         f"- Preço: {produto['preco_texto']}\n"
         f"- Tipo de entrega: arquivo digital (PDF)\n"
-        f"- Arquivo para enviar à plataforma: `{pdf_nome}` (nesta mesma pasta)\n\n"
+        f"- Arquivo da entrega: `{pdf_nome}` (nesta mesma pasta)\n\n"
         f"## Descrição da oferta (copie e cole)\n\n{produto.get('descricao_oferta', '')}\n\n"
         f"## O que vem dentro\n\n{itens}\n\n"
-        f"## Depois de cadastrar\n\n"
-        f"1. Rode a ação `verificar` no GitHub (Actions → Fábrica de Produtos). O robô procura o produto pelo "
-        f"nome e, se a API devolver o link, libera o produto.\n"
-        f"2. Se a API não devolver o link, copie o link de compra da plataforma e rode a ação `definir-link` "
+        f"## Para liberar o anúncio\n\n"
+        f"1. No painel da Cakto, abra o produto, configure a entrega com o PDF acima e **ative** o produto.\n"
+        f"2. Rode a ação `verificar` no GitHub (Actions → Fábrica de Produtos), ou espere a verificação "
+        f"automática de 6 em 6 horas. O robô só libera se o produto estiver **ativo** e a API devolver o link.\n"
+        f"3. Se a API não devolver o link, copie o link de compra do painel e rode a ação `definir-link` "
         f"com o id `{produto['id']}` e o link.\n"
-        f"3. Só depois disso os robôs de anúncio passam a divulgar o produto.\n"
+        f"4. Só depois disso os robôs de anúncio passam a divulgar o produto.\n"
     )
 
 
@@ -77,12 +80,19 @@ def registrar_produto(produto_id: str, dry_run: bool | None = None, nomes: list[
             if not plat.configurada():
                 linhas.append(f"{plat.nome}: pulada (faltam variáveis: {', '.join(plat.faltando())})")
                 continue
+            # criar_produto procura pelo nome antes de criar: repetir a chamada após um erro nunca duplica.
             for tentativa in (1, 2):
                 try:
                     r = plat.criar_produto(p, pacote["pdf"])
-                    linhas.append(f"{plat.nome}: produto criado (id {r.get('id', '?')})")
-                    if criado is None and link_ok(r.get("link", "")):
-                        criado = (plat.nome, r["link"])
+                    origem = "já existia" if r.get("existente") else "criado"
+                    linhas.append(f"{plat.nome}: produto {origem} (id {r.get('id', '?')}, "
+                                  f"status {r.get('status', '?')})")
+                    if r.get("ativo") and link_ok(r.get("link", "")):
+                        if criado is None:
+                            criado = (plat.nome, r["link"])
+                    else:
+                        linhas.append(f"{plat.nome}: ainda não liberado para venda. Configure a entrega do PDF "
+                                      "no painel e ative o produto; o robô libera sozinho em seguida")
                     break
                 except plataformas.NaoSuportado as e:
                     linhas.append(str(e))
@@ -110,7 +120,7 @@ def verificar_links(nomes: list[str] | None = None) -> list[str]:
         return ["nenhum produto aguardando cadastro"]
     ativas = [pl for pl in plataformas.instanciar(nomes or cfg.PLATAFORMAS_ALVO) if pl.configurada()]
     if not ativas:
-        return ["nenhuma plataforma configurada: defina os Secrets da Kiwify e/ou Hotmart"]
+        return ["nenhuma plataforma configurada: defina os Secrets CAKTO_CLIENT_ID e CAKTO_CLIENT_SECRET"]
     for p in pendentes:
         liberado = False
         for plat in ativas:
@@ -122,13 +132,17 @@ def verificar_links(nomes: list[str] | None = None) -> list[str]:
             if not achado:
                 linhas.append(f"{p['id']} / {plat.nome}: produto ainda não encontrado pelo nome")
                 continue
-            if link_ok(achado.get("link", "")):
+            if achado.get("ativo") and link_ok(achado.get("link", "")):
                 catalogo.atualizar(p["id"], f"encontrado na {plat.nome}; link de compra recebido pela API",
                                    status="pronto", plataforma=plat.nome, link_compra=achado["link"])
                 linhas.append(f"{p['id']}: LIBERADO com o link da {plat.nome}")
                 liberado = True
                 break
-            aviso = f"encontrado na {plat.nome}, mas a API não devolveu o link: use definir-link"
+            if not achado.get("ativo"):
+                aviso = (f"encontrado na {plat.nome}, mas ainda não está ativo "
+                         f"(status {achado.get('status')}): configure a entrega do PDF e ative o produto")
+            else:
+                aviso = f"encontrado na {plat.nome}, mas a API não devolveu o link: use definir-link"
             if not p.get("historico") or p["historico"][-1].get("evento") != aviso:
                 catalogo.atualizar(p["id"], aviso)
             linhas.append(f"{p['id']}: {aviso}")

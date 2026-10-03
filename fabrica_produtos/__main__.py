@@ -2,7 +2,7 @@
 
   python -m fabrica_produtos criar                 cria, revisa e registra UM produto (respeita pausa e limite diário)
   python -m fabrica_produtos verificar             procura os produtos pendentes nas plataformas e libera os que têm link
-  python -m fabrica_produtos definir-link --id ID --link URL [--plataforma kiwify|hotmart]
+  python -m fabrica_produtos definir-link --id ID --link URL [--plataforma cakto]
   python -m fabrica_produtos sondar                relatório (somente leitura) do que as APIs aceitam
   python -m fabrica_produtos status                lista o catálogo
 """

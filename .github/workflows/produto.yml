@@ -34,13 +34,10 @@ jobs:
       GROQ_MODEL: ${{ vars.GROQ_MODEL }}
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
-      # --- Plataformas de venda (confirme os NOMES dos seus Secrets; veja fabrica_produtos/README.md) ---
-      KIWIFY_CLIENT_ID: ${{ secrets.KIWIFY_CLIENT_ID }}
-      KIWIFY_CLIENT_SECRET: ${{ secrets.KIWIFY_CLIENT_SECRET }}
-      KIWIFY_ACCOUNT_ID: ${{ secrets.KIWIFY_ACCOUNT_ID }}
-      HOTMART_CLIENT_ID: ${{ secrets.HOTMART_CLIENT_ID }}
-      HOTMART_CLIENT_SECRET: ${{ secrets.HOTMART_CLIENT_SECRET }}
-      HOTMART_BASIC: ${{ secrets.HOTMART_BASIC }}
+      # --- Cakto (Painel Cakto > Integracoes > Cakto API > Criar chave de API) ---
+      CAKTO_CLIENT_ID: ${{ secrets.CAKTO_CLIENT_ID }}
+      CAKTO_CLIENT_SECRET: ${{ secrets.CAKTO_CLIENT_SECRET }}
+      CAKTO_SALES_PAGE: ${{ vars.CAKTO_SALES_PAGE }}   # opcional: URL da pagina de vendas, se a Cakto exigir
       # --- Interruptores (Settings > Secrets and variables > Actions > Variables) ---
       FABRICA_DRY_RUN: ${{ vars.FABRICA_DRY_RUN || 'true' }}   # true = não cria nada nas plataformas
       FABRICA_PAUSADA: ${{ vars.FABRICA_PAUSADA || 'false' }}  # true = pausa a criação de produtos novos

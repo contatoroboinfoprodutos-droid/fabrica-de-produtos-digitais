@@ -35,7 +35,7 @@ MAX_CONTEUDOS = 5
 
 # --- Plataformas onde o registrador atua ---
 PLATAFORMAS_ALVO = [p.strip().lower() for p in
-                    (os.getenv("FABRICA_PLATAFORMAS", "").strip() or "kiwify,hotmart").split(",")
+                    (os.getenv("FABRICA_PLATAFORMAS", "").strip() or "cakto").split(",")
                     if p.strip()]
 
 # --- Marca (para o PDF) ---

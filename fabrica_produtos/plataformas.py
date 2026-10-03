@@ -1,25 +1,28 @@
-"""Clientes das plataformas de venda (Kiwify e Hotmart).
+"""Cliente da Cakto (única plataforma de venda desta fábrica).
 
-IMPORTANTE: os endereços e campos abaixo vêm da documentação pública como eu a conheço e NÃO foram
-validados contra as suas contas. Por isso:
-  - todos os endereços podem ser trocados por variável de ambiente;
-  - o comando `sondar` (somente leitura) mostra no log o que cada API aceita e o formato real da resposta;
-  - criar produto por API só será implementado depois que a sondagem confirmar um endpoint de criação
-    (inventar o formato do pedido seria chute). Até lá, criar_produto levanta NaoSuportado e o
-    registrador cai no fluxo "pacote pronto + busca do link pela API".
+Baseado na documentação pública da Cakto (docs.cakto.com.br):
+  - token:   POST /public_api/token/ (formulário com client_id e client_secret)
+  - listar:  GET  /public_api/products/   (search, status, limit, page; resposta com count/next/results)
+  - obter:   GET  /public_api/products/{id}/
+  - criar:   POST /public_api/products/   ("já gera a oferta padrão, o checkout e o link de pagamento")
+  - link:    https://pay.cakto.com.br/{id_da_oferta}   (montado a partir de offers[].id)
+
+NÃO foi testado contra uma conta real. Os endereços podem ser trocados por variáveis de ambiente e o
+comando `sondar` (somente leitura) mostra no log o que a sua conta aceita de verdade.
 Nenhuma função aqui imprime credencial, token ou o corpo da resposta de autenticação.
 """
-import base64
 import logging
 import os
+import time
 
 import requests
 
-from .texto import normalizar
+from .texto import formatar_preco, normalizar, parse_preco
 from .travas import link_ok
 
 logger = logging.getLogger("fabrica")
 TIMEOUT = 30
+MAX_ESPERA_429 = 60  # segundos
 
 
 class NaoSuportado(Exception):
@@ -30,80 +33,130 @@ class ErroPlataforma(Exception):
     """Falha de comunicação ou resposta inesperada (a mensagem nunca contém segredos)."""
 
 
-def _env(*nomes: str) -> str:
-    for n in nomes:
-        v = os.getenv(n, "").strip()
-        if v:
-            return v
-    return ""
+def _env(nome: str) -> str:
+    return os.getenv(nome, "").strip()
 
 
-def _itens(resposta_json) -> list:
-    """Extrai a lista de itens de formatos comuns de resposta paginada."""
-    if isinstance(resposta_json, list):
-        return resposta_json
-    if isinstance(resposta_json, dict):
-        for chave in ("data", "items", "products", "results"):
-            if isinstance(resposta_json.get(chave), list):
-                return resposta_json[chave]
-    return []
+def _espera(resposta) -> float:
+    try:
+        return max(1.0, min(float(resposta.headers.get("Retry-After", "5")), MAX_ESPERA_429))
+    except (TypeError, ValueError):
+        return 5.0
 
 
-def _achar_link(item: dict) -> str:
-    for chave in ("checkout_link", "payment_link", "checkout_url", "link", "url", "sales_page"):
-        v = item.get(chave)
-        if isinstance(v, str) and link_ok(v):
-            return v.strip()
-    return ""
+class Cakto:
+    nome = "cakto"
+    variaveis = ("CAKTO_CLIENT_ID", "CAKTO_CLIENT_SECRET")  # só os NOMES aparecem em relatórios
 
+    def __init__(self):
+        self.base = (_env("CAKTO_BASE_URL") or "https://api.cakto.com.br").rstrip("/")
+        self.pay_base = (_env("CAKTO_PAY_BASE") or "https://pay.cakto.com.br").rstrip("/")
+        self._token = ""
 
-class Plataforma:
-    nome = ""
-    variaveis: tuple = ()  # nomes das variáveis exigidas (só os nomes aparecem em relatórios)
-
+    # -- credenciais --
     def faltando(self) -> list[str]:
         return [v for v in self.variaveis if not _env(v)]
 
     def configurada(self) -> bool:
         return not self.faltando()
 
-    # -- a implementar em cada plataforma --
-    def _pedir_pagina(self, pagina_token):
-        raise NotImplementedError
+    # -- HTTP --
+    def _autenticar(self) -> None:
+        try:
+            r = requests.request("POST", f"{self.base}/public_api/token/", timeout=TIMEOUT,
+                                 data={"client_id": _env("CAKTO_CLIENT_ID"),
+                                       "client_secret": _env("CAKTO_CLIENT_SECRET")})
+        except requests.RequestException as e:
+            raise ErroPlataforma(f"cakto: falha de rede na autenticação ({type(e).__name__})")
+        if r.status_code not in (200, 201):
+            raise ErroPlataforma(f"cakto: autenticação recusada (HTTP {r.status_code})")
+        try:
+            self._token = str(r.json().get("access_token") or "")
+        except ValueError:
+            self._token = ""
+        if not self._token:
+            raise ErroPlataforma("cakto: a resposta de autenticação não trouxe token")
 
-    def listar_produtos(self) -> list[dict]:
-        """Lista normalizada: [{'id','nome','link'}]. Para depois de 10 páginas."""
-        vistos, saida, token = set(), [], None
-        for _ in range(10):
-            j = self._pedir_pagina(token)
-            novos = 0
-            for it in _itens(j):
-                if not isinstance(it, dict):
-                    continue
-                pid = str(it.get("id") or it.get("uuid") or it.get("ucode") or "")
-                if pid in vistos:
-                    continue
-                vistos.add(pid)
-                novos += 1
-                saida.append({"id": pid, "nome": str(it.get("name") or it.get("title") or it.get("nome") or ""),
-                              "link": _achar_link(it)})
-            token = self._proximo_token(j)
-            if not token or not novos:
+    def _req(self, metodo: str, caminho: str, **kw):
+        """Reaproveita o token, renova se vier 401 e respeita o Retry-After do 429."""
+        for tentativa in (1, 2, 3):
+            if not self._token:
+                self._autenticar()
+            try:
+                r = requests.request(metodo, self.base + caminho, timeout=TIMEOUT,
+                                     headers={"Authorization": f"Bearer {self._token}"}, **kw)
+            except requests.RequestException as e:
+                raise ErroPlataforma(f"cakto: falha de rede em {metodo} {caminho} ({type(e).__name__})")
+            if r.status_code == 401 and tentativa == 1:
+                self._token = ""
+                continue
+            if r.status_code == 429 and tentativa < 3:
+                time.sleep(_espera(r))
+                continue
+            if r.status_code in (200, 201):
+                try:
+                    return r.json()
+                except ValueError:
+                    raise ErroPlataforma(f"cakto: {metodo} {caminho} devolveu resposta que não é JSON")
+            detalhe = f": {r.text[:300]}" if r.status_code in (400, 403, 404, 409, 422) else ""
+            raise ErroPlataforma(f"cakto: {metodo} {caminho} recusado (HTTP {r.status_code}){detalhe}")
+        raise ErroPlataforma(f"cakto: {metodo} {caminho} sem sucesso após 3 tentativas")
+
+    # -- produtos --
+    def _resumo(self, p: dict) -> dict:
+        """Normaliza um produto da API: id, nome, status, ativo e o link de compra (da oferta padrão)."""
+        ofertas = [o for o in (p.get("offers") or []) if isinstance(o, dict)]
+        oferta = next((o for o in ofertas if o.get("default")), ofertas[0] if ofertas else None)
+        link = f"{self.pay_base}/{oferta['id']}" if oferta and oferta.get("id") else ""
+        ativo = p.get("status") == "active" and (oferta is None or oferta.get("status") in (None, "active"))
+        return {"id": str(p.get("id") or ""), "nome": str(p.get("name") or ""), "status": p.get("status"),
+                "ativo": bool(ativo), "link": link if link_ok(link) else ""}
+
+    def listar_por_nome(self, nome: str) -> list[dict]:
+        """Produtos cujo nome contém `nome` (até 5 páginas), sem os apagados."""
+        achados = []
+        for pagina in range(1, 6):
+            j = self._req("GET", "/public_api/products/",
+                          params={"search": nome, "limit": 50, "page": pagina,
+                                  "status": "active,waiting_config,blocked"})
+            achados += [p for p in (j.get("results") or []) if isinstance(p, dict)]
+            if not j.get("next"):
                 break
-        return saida
-
-    def _proximo_token(self, j):
-        return None
+        return achados
 
     def buscar_por_nome(self, nome: str) -> dict | None:
         alvo = normalizar(nome)
-        return next((p for p in self.listar_produtos() if normalizar(p["nome"]) == alvo), None)
+        for p in self.listar_por_nome(nome):
+            if normalizar(str(p.get("name") or "")) == alvo:
+                return self._resumo(self._req("GET", f"/public_api/products/{p['id']}/"))
+        return None
 
-    def criar_produto(self, produto: dict, pdf_path: str) -> dict:
-        raise NaoSuportado(f"{self.nome}: criação de produto por API não confirmada (rode `sondar`).")
+    def criar_produto(self, produto: dict, pdf_path: str, url_entrega: str | None = None) -> dict:
+        """Cria o produto (que já nasce com oferta, checkout e link). Se já existir um com o mesmo nome,
+        reaproveita: assim uma nova tentativa depois de um erro de rede nunca duplica o produto.
 
+        Sem `url_entrega` o produto nasce em 'waiting_config' (não pode ser vendido vazio). Com ela,
+        nasce 'active' com entrega por e-mail (emailAccess) apontando para o PDF."""
+        existente = self.buscar_por_nome(produto["nome"])
+        if existente:
+            existente["existente"] = True
+            return existente
+        preco = parse_preco(produto.get("preco"))
+        if preco is None:
+            raise ErroPlataforma("cakto: produto sem preço válido")
+        corpo = {"name": produto["nome"], "description": produto.get("descricao_oferta") or produto["promessa"],
+                 "price": f"{preco:.2f}", "currency": "BRL", "type": "unique",
+                 "status": "active" if url_entrega else "waiting_config"}
+        if url_entrega:
+            corpo.update({"contentDeliveries": ["emailAccess"], "emailAccessLink": url_entrega})
+        if _env("CAKTO_SALES_PAGE"):
+            corpo["salesPage"] = _env("CAKTO_SALES_PAGE")
+        r = self._resumo(self._req("POST", "/public_api/products/", json=corpo))
+        r["existente"] = False
+        return r
+
+    # -- sondagem (somente leitura) --
     def sondar(self) -> list[str]:
-        """Relatório de capacidades (somente leitura). Não imprime valores de credenciais."""
         linhas = [f"## {self.nome}"]
         falta = self.faltando()
         if falta:
@@ -111,118 +164,24 @@ class Plataforma:
             return linhas
         linhas.append("- credenciais: todas as variáveis esperadas estão presentes")
         try:
-            j = self._pedir_pagina(None)
-            itens = _itens(j)
-            linhas.append(f"- autenticação e listagem: OK, {len(itens)} produto(s) na primeira página")
-            if isinstance(j, dict):
-                linhas.append(f"- chaves da resposta: {sorted(j.keys())}")
-            if itens and isinstance(itens[0], dict):
+            self._autenticar()
+            linhas.append("- autenticação: OK")
+            j = self._req("GET", "/public_api/products/", params={"limit": 5})
+            itens = [p for p in (j.get("results") or []) if isinstance(p, dict)]
+            linhas.append(f"- listagem: OK, {j.get('count', len(itens))} produto(s) na conta")
+            linhas.append(f"- chaves da resposta: {sorted(j.keys())}")
+            if itens:
                 linhas.append(f"- chaves de um produto: {sorted(itens[0].keys())}")
-                linhas.append(f"- link de compra aparece na listagem: {'sim' if _achar_link(itens[0]) else 'não'}")
         except ErroPlataforma as e:
             linhas.append(f"- autenticação/listagem: FALHOU ({e})")
-        linhas.append("- criar produto: NÃO testado (a sondagem é somente leitura). Nenhum endpoint de "
-                      "criação está implementado; o registrador usa o pacote pronto + busca do link.")
+        linhas.append("- criar produto: implementado conforme a documentação, NÃO testado (a sondagem é "
+                      "somente leitura). Sem hospedagem do PDF, o produto nasce em 'waiting_config'.")
+        linhas.append(f"- escopos da chave de API necessários: read, write, products, offers")
         return linhas
 
 
-class Kiwify(Plataforma):
-    nome = "kiwify"
-    variaveis = ("KIWIFY_CLIENT_ID", "KIWIFY_CLIENT_SECRET", "KIWIFY_ACCOUNT_ID")
-
-    def __init__(self):
-        self.base = _env("KIWIFY_BASE_URL") or "https://public-api.kiwify.com/v1"
-        self._token = ""
-
-    def _autenticar(self) -> None:
-        try:
-            r = requests.post(self.base + "/oauth/token", timeout=TIMEOUT,
-                              data={"client_id": _env("KIWIFY_CLIENT_ID"),
-                                    "client_secret": _env("KIWIFY_CLIENT_SECRET")})
-        except requests.RequestException as e:
-            raise ErroPlataforma(f"kiwify: falha de rede na autenticação ({type(e).__name__})")
-        if r.status_code != 200:
-            raise ErroPlataforma(f"kiwify: autenticação recusada (HTTP {r.status_code})")
-        self._token = str(r.json().get("access_token") or "")
-        if not self._token:
-            raise ErroPlataforma("kiwify: a resposta de autenticação não trouxe token")
-
-    def _pedir_pagina(self, pagina_token):
-        if not self._token:
-            self._autenticar()
-        try:
-            r = requests.get(self.base + "/products", timeout=TIMEOUT,
-                             params={"page_size": 100, "page_number": pagina_token or 1},
-                             headers={"Authorization": f"Bearer {self._token}",
-                                      "x-kiwify-account-id": _env("KIWIFY_ACCOUNT_ID")})
-        except requests.RequestException as e:
-            raise ErroPlataforma(f"kiwify: falha de rede ({type(e).__name__})")
-        if r.status_code != 200:
-            raise ErroPlataforma(f"kiwify: listagem recusada (HTTP {r.status_code})")
-        return r.json()
-
-    def _proximo_token(self, j):
-        # Sem metadado de paginação confiável: a próxima página só é pedida se esta veio cheia.
-        itens = _itens(j)
-        if len(itens) < 100:
-            return None
-        self._pagina = getattr(self, "_pagina", 1) + 1
-        return self._pagina
+REGISTRO = {"cakto": Cakto}
 
 
-class Hotmart(Plataforma):
-    nome = "hotmart"
-    variaveis = ("HOTMART_CLIENT_ID", "HOTMART_CLIENT_SECRET")
-
-    def __init__(self):
-        self.auth_url = _env("HOTMART_AUTH_URL") or "https://api-sec-vlc.hotmart.com/security/oauth/token"
-        self.base = _env("HOTMART_BASE_URL") or "https://developers.hotmart.com/products/api/v1"
-        self._token = ""
-
-    def _basic(self) -> str:
-        pronto = _env("HOTMART_BASIC")
-        if pronto:
-            return pronto.removeprefix("Basic ").strip()
-        par = f"{_env('HOTMART_CLIENT_ID')}:{_env('HOTMART_CLIENT_SECRET')}"
-        return base64.b64encode(par.encode()).decode()
-
-    def _autenticar(self) -> None:
-        try:
-            r = requests.post(self.auth_url, timeout=TIMEOUT,
-                              params={"grant_type": "client_credentials",
-                                      "client_id": _env("HOTMART_CLIENT_ID"),
-                                      "client_secret": _env("HOTMART_CLIENT_SECRET")},
-                              headers={"Authorization": f"Basic {self._basic()}"})
-        except requests.RequestException as e:
-            raise ErroPlataforma(f"hotmart: falha de rede na autenticação ({type(e).__name__})")
-        if r.status_code != 200:
-            raise ErroPlataforma(f"hotmart: autenticação recusada (HTTP {r.status_code})")
-        self._token = str(r.json().get("access_token") or "")
-        if not self._token:
-            raise ErroPlataforma("hotmart: a resposta de autenticação não trouxe token")
-
-    def _pedir_pagina(self, pagina_token):
-        if not self._token:
-            self._autenticar()
-        params = {"max_results": 100}
-        if pagina_token:
-            params["page_token"] = pagina_token
-        try:
-            r = requests.get(self.base + "/products", timeout=TIMEOUT, params=params,
-                             headers={"Authorization": f"Bearer {self._token}"})
-        except requests.RequestException as e:
-            raise ErroPlataforma(f"hotmart: falha de rede ({type(e).__name__})")
-        if r.status_code != 200:
-            raise ErroPlataforma(f"hotmart: listagem recusada (HTTP {r.status_code})")
-        return r.json()
-
-    def _proximo_token(self, j):
-        info = j.get("page_info") if isinstance(j, dict) else None
-        return (info or {}).get("next_page_token") or None
-
-
-REGISTRO = {"kiwify": Kiwify, "hotmart": Hotmart}
-
-
-def instanciar(nomes: list[str]) -> list[Plataforma]:
+def instanciar(nomes: list[str]) -> list:
     return [REGISTRO[n]() for n in nomes if n in REGISTRO]

@@ -33,7 +33,7 @@ class Base(unittest.TestCase):
 
     def liberar(self):
         r = catalogo.adicionar(produto_bom(), "aprovado", "x")
-        catalogo.atualizar(r["id"], "ok", status="pronto", link_compra=LINK, plataforma="kiwify")
+        catalogo.atualizar(r["id"], "ok", status="pronto", link_compra=LINK, plataforma="cakto")
 
 
 class Lowticket(Base):

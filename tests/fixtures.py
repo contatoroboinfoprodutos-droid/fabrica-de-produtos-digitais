@@ -26,7 +26,7 @@ def produto_bom(nome="Guia Prático de Rotina em 7 Dias", preco=7.0, **extra):
 def produto_pronto(nome="Guia Prático de Rotina em 7 Dias", link="https://pay.exemplo.com.br/abc123"):
     p = produto_bom(nome)
     p.update({"id": "p20261003-1", "status": "pronto", "preco": 7.0, "preco_texto": "R$ 7,00",
-              "link_compra": link, "plataforma": "kiwify"})
+              "link_compra": link, "plataforma": "cakto"})
     return p
 
 

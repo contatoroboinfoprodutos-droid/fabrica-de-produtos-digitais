@@ -77,7 +77,7 @@ class Registrador(Base):
         self.addCleanup(lambda: setattr(plataformas, "instanciar", self._orig))
 
     def test_pacote_e_aguardando_cadastro(self):
-        self._plats(FakePlat("kiwify"), FakePlat("hotmart"))
+        self._plats(FakePlat("plat_a"), FakePlat("plat_b"))
         r = catalogo.adicionar(produto_bom(), "aprovado", "x")
         linhas = registrador.registrar_produto(r["id"], dry_run=False)
         p = catalogo.obter(r["id"])
@@ -92,15 +92,15 @@ class Registrador(Base):
 
     def test_verificar_libera_quando_acha_com_link(self):
         r = catalogo.adicionar(produto_bom(), "aguardando_cadastro", "x")
-        self._plats(FakePlat("kiwify", achado={"id": "1", "nome": r["nome"], "link": LINK}))
+        self._plats(FakePlat("plat_a", achado={"id": "1", "nome": r["nome"], "link": LINK, "ativo": True}))
         registrador.verificar_links()
         p = catalogo.obter(r["id"])
-        self.assertEqual((p["status"], p["link_compra"], p["plataforma"]), ("pronto", LINK, "kiwify"))
+        self.assertEqual((p["status"], p["link_compra"], p["plataforma"]), ("pronto", LINK, "plat_a"))
 
     def test_verificar_nao_libera_sem_link_nem_com_erro(self):
         r = catalogo.adicionar(produto_bom(), "aguardando_cadastro", "x")
-        self._plats(FakePlat("kiwify", achado={"id": "1", "nome": r["nome"], "link": ""}),
-                    FakePlat("hotmart", erro="HTTP 401"))
+        self._plats(FakePlat("plat_a", achado={"id": "1", "nome": r["nome"], "link": "", "ativo": True}),
+                    FakePlat("plat_b", erro="HTTP 401"))
         linhas = registrador.verificar_links()
         self.assertEqual(catalogo.obter(r["id"])["status"], "aguardando_cadastro")
         self.assertTrue(any("definir-link" in l for l in linhas))
@@ -108,10 +108,10 @@ class Registrador(Base):
 
     def test_erro_em_uma_plataforma_nao_barra_a_outra(self):
         r = catalogo.adicionar(produto_bom(), "aguardando_cadastro", "x")
-        self._plats(FakePlat("kiwify", erro="HTTP 500"),
-                    FakePlat("hotmart", achado={"id": "9", "nome": r["nome"], "link": LINK}))
+        self._plats(FakePlat("plat_a", erro="HTTP 500"),
+                    FakePlat("plat_b", achado={"id": "9", "nome": r["nome"], "link": LINK, "ativo": True}))
         registrador.verificar_links()
-        self.assertEqual(catalogo.obter(r["id"])["plataforma"], "hotmart")
+        self.assertEqual(catalogo.obter(r["id"])["plataforma"], "plat_b")
 
     def test_definir_link(self):
         r = catalogo.adicionar(produto_bom(), "aguardando_cadastro", "x")
@@ -119,7 +119,7 @@ class Registrador(Base):
             registrador.definir_link(r["id"], "https://SEU-LINK-DE-CHECKOUT")
         with self.assertRaises(ValueError):
             registrador.definir_link(r["id"], "http://inseguro.com/x")
-        registrador.definir_link(r["id"], LINK, "hotmart")
+        registrador.definir_link(r["id"], LINK, "plat_b")
         self.assertEqual(catalogo.produto_ativo()["link_compra"], LINK)
 
     def test_nao_registra_produto_reprovado(self):
