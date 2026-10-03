@@ -1,0 +1,96 @@
+name: Fabrica de Produtos (criar, revisar, registrar)
+
+on:
+  workflow_dispatch:
+    inputs:
+      acao:
+        description: "criar | verificar | sondar | definir-link | status"
+        default: "criar"
+      produto_id:
+        description: "Só para definir-link: id do produto (ex.: p20261003-1)"
+        required: false
+      link_compra:
+        description: "Só para definir-link: link de compra copiado da plataforma"
+        required: false
+  schedule:
+    - cron: "0 9 * * *"     # 06:00 Brasília -> cria no máximo 1 produto por dia
+    - cron: "30 */6 * * *"  # a cada 6 h -> procura o link dos produtos cadastrados e libera
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fabrica-produtos
+  cancel-in-progress: false
+
+jobs:
+  fabrica:
+    runs-on: ubuntu-latest
+    env:
+      # --- IA (o orientador usa um provedor diferente do criador quando há mais de uma chave) ---
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      GROQ_MODEL: ${{ vars.GROQ_MODEL }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
+      # --- Plataformas de venda (confirme os NOMES dos seus Secrets; veja fabrica_produtos/README.md) ---
+      KIWIFY_CLIENT_ID: ${{ secrets.KIWIFY_CLIENT_ID }}
+      KIWIFY_CLIENT_SECRET: ${{ secrets.KIWIFY_CLIENT_SECRET }}
+      KIWIFY_ACCOUNT_ID: ${{ secrets.KIWIFY_ACCOUNT_ID }}
+      HOTMART_CLIENT_ID: ${{ secrets.HOTMART_CLIENT_ID }}
+      HOTMART_CLIENT_SECRET: ${{ secrets.HOTMART_CLIENT_SECRET }}
+      HOTMART_BASIC: ${{ secrets.HOTMART_BASIC }}
+      # --- Interruptores (Settings > Secrets and variables > Actions > Variables) ---
+      FABRICA_DRY_RUN: ${{ vars.FABRICA_DRY_RUN || 'true' }}   # true = não cria nada nas plataformas
+      FABRICA_PAUSADA: ${{ vars.FABRICA_PAUSADA || 'false' }}  # true = pausa a criação de produtos novos
+      PRODUTO_TOPICO: ${{ secrets.PRODUTO_TOPICO }}
+      # --- entradas manuais (passam por variável de ambiente, nunca direto no script) ---
+      EVENTO: ${{ github.event_name }}
+      CRON: ${{ github.event.schedule }}
+      ACAO_INPUT: ${{ github.event.inputs.acao }}
+      PRODUTO_ID: ${{ github.event.inputs.produto_id }}
+      LINK_COMPRA: ${{ github.event.inputs.link_compra }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: fabrica_produtos/requirements_fabrica.txt
+      - run: pip install -r fabrica_produtos/requirements_fabrica.txt
+
+      - name: Executa a fabrica
+        run: |
+          if [ "$EVENTO" = "workflow_dispatch" ]; then ACAO="${ACAO_INPUT:-criar}"
+          elif [ "$CRON" = "0 9 * * *" ]; then ACAO=criar
+          else ACAO=verificar; fi
+          echo "Acao: $ACAO"
+          if [ "$ACAO" = "definir-link" ]; then
+            if [ -z "$PRODUTO_ID" ] || [ -z "$LINK_COMPRA" ]; then
+              echo "definir-link exige produto_id e link_compra"; exit 1
+            fi
+            python -m fabrica_produtos definir-link --id "$PRODUTO_ID" --link "$LINK_COMPRA"
+          else
+            python -m fabrica_produtos "$ACAO"
+          fi
+
+      - name: Guarda o catalogo no repositorio
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add catalogo
+          if git diff --cached --quiet; then echo "Catalogo sem mudancas"; exit 0; fi
+          git commit -m "Atualiza catalogo de produtos"
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin "HEAD:$GITHUB_REF_NAME"
+
+      - name: Pacotes de cadastro (baixe na pagina da execucao)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pacotes-de-produto
+          path: catalogo/pacotes/
+          if-no-files-found: ignore
+          retention-days: 14

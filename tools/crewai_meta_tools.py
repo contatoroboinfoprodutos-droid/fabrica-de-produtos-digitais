@@ -11,6 +11,24 @@ from pydantic import BaseModel, Field
 
 from tools.meta_graph_api import MetaGraphAPI, MetaGraphAPIError
 from config import get_settings
+from fabrica_produtos import catalogo, travas
+
+
+def _preparar(texto: str):
+    """Travas em código: o texto só pode afirmar o que está no catálogo. Devolve
+    (produto, texto_corrigido, ajustes, problemas). Problemas = não publicar em modo real."""
+    produto = catalogo.produto_ativo()
+    legenda, acoes, problemas = travas.preparar_legenda(produto, texto, "VITRINE")
+    return produto, legenda, acoes, problemas
+
+
+def _nota_travas(acoes, problemas) -> str:
+    nota = ""
+    if acoes:
+        nota += f" [TRAVAS] ajustes automáticos: {'; '.join(acoes)}."
+    if problemas:
+        nota += f" [AVISO] em modo real seria BLOQUEADO: {'; '.join(problemas)}."
+    return nota
 
 
 # ---------------------------------------------------------------------- #
@@ -37,12 +55,16 @@ class PublishToFacebookTool(BaseTool):
     args_schema: Type[BaseModel] = FacebookPostInput
 
     def _run(self, message: str, link: Optional[str] = None, image_url: Optional[str] = None) -> str:
+        produto, message, acoes, problemas = _preparar(message)
         # Simulação: sai ANTES de qualquer chamada de rede à Meta.
         if get_settings().dry_run:
             return (
                 "[DRY_RUN] Facebook NÃO publicado (nenhuma chamada foi feita à Meta). "
-                f"image_url={image_url!r} message={message!r}"
+                f"image_url={image_url!r} message={message!r}" + _nota_travas(acoes, problemas)
             )
+        if problemas:
+            return "ERRO: publicação no Facebook bloqueada pelas travas: " + "; ".join(problemas)
+        link = produto["link_compra"]  # o link anexado é sempre o do catálogo
         api = MetaGraphAPI()
         try:
             result = api.publish_facebook_post(message=message, link=link, image_url=image_url)
@@ -70,12 +92,15 @@ class PublishToInstagramTool(BaseTool):
     args_schema: Type[BaseModel] = InstagramPostInput
 
     def _run(self, image_url: str, caption: str) -> str:
+        produto, caption, acoes, problemas = _preparar(caption)
         # Simulação: sai ANTES de qualquer chamada de rede à Meta.
         if get_settings().dry_run:
             return (
                 "[DRY_RUN] Instagram NÃO publicado (nenhuma chamada foi feita à Meta). "
-                f"image_url={image_url!r} caption={caption!r}"
+                f"image_url={image_url!r} caption={caption!r}" + _nota_travas(acoes, problemas)
             )
+        if problemas:
+            return "ERRO: publicação no Instagram bloqueada pelas travas: " + "; ".join(problemas)
         api = MetaGraphAPI()
         try:
             result = api.publish_instagram_post(image_url=image_url, caption=caption)

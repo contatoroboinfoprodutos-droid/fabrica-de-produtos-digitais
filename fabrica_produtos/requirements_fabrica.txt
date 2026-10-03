@@ -1,0 +1,3 @@
+crewai[google-genai]>=0.86.0
+requests>=2.31.0
+reportlab>=4.0

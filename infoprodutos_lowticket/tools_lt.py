@@ -10,6 +10,7 @@ import time
 import requests
 from crewai.tools import tool
 from PIL import Image, ImageDraw, ImageFont
+from fabrica_produtos import travas
 from . import config_lt as cfg
 
 logger = logging.getLogger("lowticket")
@@ -71,6 +72,20 @@ def _slot_do_arquivo(filename):
     return nome.replace("post_", "", 1)
 
 
+def _tipo_do_arquivo(filename):
+    return cfg.SLOTS.get(_slot_do_arquivo(filename), {}).get("tipo", "VALOR")
+
+
+def _texto_card_seguro(headline, subline, tipo):
+    """Tira markdown e termos proibidos do texto do card; se sobrar pouco, usa o texto do catálogo."""
+    h = travas.sanear_texto(travas.limpar_markdown(headline))
+    s = travas.sanear_texto(travas.limpar_markdown(subline))
+    if len(h) < 5:
+        h_modelo, s_modelo = travas.card_modelo(cfg.PRODUTO, tipo)
+        h, s = h_modelo, (s or s_modelo)
+    return h, s
+
+
 @tool("lt_render_card")
 def lt_render_card(filename: str, headline: str, subline: str = "", tema_imagem: str = "") -> str:
     """Gera uma imagem 1080x1350 (feed IG/FB) com foto de fundo e título/subtítulo por cima.
@@ -78,6 +93,7 @@ def lt_render_card(filename: str, headline: str, subline: str = "", tema_imagem:
     Args: filename (ex: post_manha.png), headline (texto principal curto), subline (opcional),
     tema_imagem (2 a 4 palavras EM INGLÊS descrevendo a foto de fundo, ex: 'woman studying laptop')."""
     os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
+    headline, subline = _texto_card_seguro(headline, subline, _tipo_do_arquivo(filename))
     fundo = Image.new("RGB", (W, H), (15, 23, 42))
     foto = _foto_unsplash(tema_imagem)
     if foto is not None:
@@ -161,11 +177,18 @@ def lt_publicar_meta(filename: str, caption: str) -> str:
     """Publica a imagem gerada por lt_render_card na página do Facebook e no Instagram.
     Args: filename (arquivo gerado, ex: post_manha.png), caption (legenda final)."""
     caption = _limpar_legenda(caption)
-    problema = _problema_do_link(filename, caption)
+    # Travas em código (fabrica_produtos/travas.py): corrigem o que dá sem inventar nada e bloqueiam o resto.
+    caption, acoes, travas_problemas = travas.preparar_legenda(cfg.PRODUTO, caption, _tipo_do_arquivo(filename))
+    problemas = list(travas_problemas)
+    problema_link = _problema_do_link(filename, caption)
+    if problema_link and problema_link not in problemas:
+        problemas.append(problema_link)
+    problema = "; ".join(problemas)
     if cfg.DRY_RUN:
+        trava_info = f"\n[TRAVAS] ajustes automáticos: {'; '.join(acoes)}" if acoes else ""
         aviso = f"\n[AVISO] Em modo real esta publicação seria BLOQUEADA: {problema}" if problema else ""
         return (f"[DRY_RUN] Facebook e Instagram NÃO publicados. Arquivo={filename}\n"
-                f"Legenda:\n{caption}{aviso}")
+                f"Legenda:\n{caption}{trava_info}{aviso}")
     if PLACEHOLDER_LINK in caption:
         return "ERRO: a legenda contém o link de exemplo. Defina a variável LT_OFFER_LINK com o link real."
     if problema:

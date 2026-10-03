@@ -1,16 +1,13 @@
 planejar_campanha:
   description: >
-    Nicho/tema desta rodada: "{produto_topico}".
-    Crie UM infoproduto digital novo (ebook, mini-curso, planilha, pack de modelos ou guia prático)
-    dentro desse nicho e planeje a campanha de venda dele.
-    Escolha a faixa de preço conforme o tipo de produto:
-    - Entrada (R$ 7,00 a R$ 9,90): checklist, guia rápido ou mini-ebook.
-    - Intermediário (R$ 17,00 a R$ 37,00): ebook completo ou pack de modelos.
-    - Completo (R$ 47,00 a R$ 97,00): curso em módulos com bônus.
-    Varie a faixa de rodada em rodada, mas lembre que a linha de entrada de R$ 7,00 é a porta de
-    entrada do portfólio. Todos os produtos são criados com ajuda de IA e entregues prontos para uso.
-    Regras: não prometa ganhos financeiros garantidos, cura, nem resultados milagrosos; fale de
-    benefícios realistas (tempo economizado, organização, aprendizado).
+    Tema desta rodada: "{produto_topico}".
+    PRODUTO DO CATÁLOGO (ele já existe; NÃO invente outro produto nem outro preço): {produto_catalogo}
+    Planeje a campanha de venda desse produto. Use exatamente o NOME, o PRECO e a PROMESSA do catálogo
+    e fale somente do que está em CONTEUDOS: não invente bônus, garantias, números, prazos nem depoimentos.
+    Todos os produtos são criados com ajuda de IA e entregues prontos para uso.
+    Regras: não prometa ganhos financeiros, lucro, primeira venda, resultado garantido nem cura, e não diga
+    que algo foi testado ou comprovado; fale de benefícios realistas (tempo economizado, organização,
+    aprendizado).
   expected_output: >
     Documento estratégico em markdown com a seção '### PRODUTO' contendo exatamente: NOME, TIPO,
     PRECO (ex.: R$ 7,00), PROMESSA (uma frase realista) e 3 a 5 CONTEUDOS (o que vem dentro).
