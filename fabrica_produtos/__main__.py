@@ -81,18 +81,31 @@ def cmd_status() -> int:
     return 0
 
 
+def cmd_marcas() -> int:
+    """Imprime UMA palavra para o workflow decidir se repete a tentativa: completo, bloqueado, parcial ou nada.
+    (parcial = só uma rede publicou; nada = ainda nada publicou.) Não usa rede nem credencial."""
+    from . import marcas
+
+    redes = tuple(r.strip() for r in os.getenv("POST_REDES", "facebook,instagram").split(",") if r.strip())
+    print(marcas.estado(redes or marcas.REDES))
+    motivo = marcas.bloqueio()
+    if motivo:
+        print(f"motivo do bloqueio: {motivo}", file=sys.stderr)
+    return 0
+
+
 def main(argv=None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     ap = argparse.ArgumentParser(prog="fabrica_produtos")
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for nome in ("criar", "verificar", "sondar", "status"):
+    for nome in ("criar", "verificar", "sondar", "status", "marcas"):
         sub.add_parser(nome)
     d = sub.add_parser("definir-link")
     d.add_argument("--id", required=True)
     d.add_argument("--link", required=True)
     d.add_argument("--plataforma", default="")
     args = ap.parse_args(argv)
-    return {"criar": cmd_criar, "verificar": cmd_verificar, "sondar": cmd_sondar, "status": cmd_status,
+    return {"criar": cmd_criar, "verificar": cmd_verificar, "sondar": cmd_sondar, "status": cmd_status, "marcas": cmd_marcas,
             "definir-link": lambda: cmd_definir_link(args)}[args.cmd]()
 
 

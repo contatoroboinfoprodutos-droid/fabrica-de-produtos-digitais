@@ -10,7 +10,7 @@ import time
 import requests
 from crewai.tools import tool
 from PIL import Image, ImageDraw, ImageFont
-from fabrica_produtos import travas
+from fabrica_produtos import marcas, travas
 from . import config_lt as cfg
 
 logger = logging.getLogger("lowticket")
@@ -189,32 +189,48 @@ def lt_publicar_meta(filename: str, caption: str) -> str:
         aviso = f"\n[AVISO] Em modo real esta publicação seria BLOQUEADA: {problema}" if problema else ""
         return (f"[DRY_RUN] Facebook e Instagram NÃO publicados. Arquivo={filename}\n"
                 f"Legenda:\n{caption}{trava_info}{aviso}")
+    if marcas.ja_publicado("facebook") and marcas.ja_publicado("instagram"):
+        return "Já publicado nesta execução no Facebook e no Instagram. Nada a repetir: finalize."
     if PLACEHOLDER_LINK in caption:
         return "ERRO: a legenda contém o link de exemplo. Defina a variável LT_OFFER_LINK com o link real."
     if problema:
+        if cfg.PRODUTO is None and cfg.SLOTS.get(_slot_do_arquivo(filename), {}).get("tipo") == "OFERTA":
+            marcas.marcar_bloqueio("post de oferta sem produto pronto no catálogo")  # repetir não resolve
         return f"ERRO: publicação bloqueada: {problema}"
     if not cfg.META_CONFIGURADA:
+        marcas.marcar_bloqueio("credenciais da Meta ausentes")
         return "ERRO: defina META_LONG_LIVED_TOKEN, FB_PAGE_ID e INSTAGRAM_ACCOUNT_ID."
     path = os.path.join(cfg.OUTPUT_DIR, filename)
     if not os.path.exists(path):
         return f"ERRO: arquivo {path} não encontrado (rode lt_render_card antes)."
 
     resultado = []
-    # 1) Facebook: envia o arquivo direto para a página
+    # 1) Facebook: envia o arquivo direto para a página (se uma tentativa anterior já publicou, não repete)
     try:
         token = _page_token()
-        with open(path, "rb") as f:
-            r = requests.post(_graph(f"{cfg.FB_PAGE_ID}/photos"),
-                              data={"caption": caption, "published": "true", "access_token": token},
-                              files={"source": f}, timeout=120)
-        if r.status_code != 200:
-            return f"Facebook: ERRO {r.status_code} {r.text}\nInstagram: não tentado (sem imagem pública)."
-        foto_id = r.json().get("id")
-        resultado.append(f"Facebook: publicado (photo_id={foto_id}, post_id={r.json().get('post_id')})")
+        anterior = marcas.lido("facebook")
+        if anterior:
+            foto_id = anterior.get("photo_id")
+            resultado.append("Facebook: já publicado antes nesta execução (não repete)")
+        else:
+            with open(path, "rb") as f:
+                r = requests.post(_graph(f"{cfg.FB_PAGE_ID}/photos"),
+                                  data={"caption": caption, "published": "true", "access_token": token},
+                                  files={"source": f}, timeout=120)
+            if r.status_code != 200:
+                return f"Facebook: ERRO {r.status_code} {r.text}\nInstagram: não tentado (sem imagem pública)."
+            foto_id = r.json().get("id")
+            marcas.marcar("facebook", {"photo_id": foto_id})
+            resultado.append(f"Facebook: publicado (photo_id={foto_id}, post_id={r.json().get('post_id')})")
     except Exception as e:
         return f"Facebook: ERRO {e}\nInstagram: não tentado."
+    if not foto_id:
+        return "\n".join(resultado + ["Instagram: não tentado (sem o id da foto do Facebook)."])
 
     # 2) Instagram: usa a URL pública que o Facebook gerou para a mesma foto
+    if marcas.ja_publicado("instagram"):
+        resultado.append("Instagram: já publicado antes nesta execução (não repete)")
+        return "\n".join(resultado)
     try:
         info = requests.get(_graph(foto_id), params={"fields": "images", "access_token": token}, timeout=30)
         info.raise_for_status()
@@ -237,6 +253,7 @@ def lt_publicar_meta(filename: str, caption: str) -> str:
         p = requests.post(_graph(f"{cfg.IG_ACCOUNT_ID}/media_publish"), data={
             "creation_id": container, "access_token": token}, timeout=60)
         if p.status_code == 200:
+            marcas.marcar("instagram", {"media_id": p.json().get("id")})
             resultado.append(f"Instagram: publicado (media_id={p.json().get('id')})")
         else:
             resultado.append(f"Instagram: ERRO {p.status_code} {p.text}")

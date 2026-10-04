@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 
 from tools.meta_graph_api import MetaGraphAPI, MetaGraphAPIError
 from config import get_settings
-from fabrica_produtos import catalogo, travas
+from fabrica_produtos import catalogo, marcas, travas
 
 
 def _preparar(texto: str):
@@ -62,12 +62,17 @@ class PublishToFacebookTool(BaseTool):
                 "[DRY_RUN] Facebook NÃO publicado (nenhuma chamada foi feita à Meta). "
                 f"image_url={image_url!r} message={message!r}" + _nota_travas(acoes, problemas)
             )
+        if marcas.ja_publicado("facebook"):
+            return "Facebook: já publicado nesta execução. Não repita: siga para o Instagram ou finalize."
         if problemas:
+            if produto is None:
+                marcas.marcar_bloqueio("sem produto pronto no catálogo")  # repetir não resolve
             return "ERRO: publicação no Facebook bloqueada pelas travas: " + "; ".join(problemas)
         link = produto["link_compra"]  # o link anexado é sempre o do catálogo
         api = MetaGraphAPI()
         try:
             result = api.publish_facebook_post(message=message, link=link, image_url=image_url)
+            marcas.marcar("facebook", {"post_id": result.post_id})
             return f"Publicado no Facebook com sucesso. post_id={result.post_id}"
         except MetaGraphAPIError as exc:
             return f"ERRO ao publicar no Facebook: {exc}"
@@ -99,11 +104,16 @@ class PublishToInstagramTool(BaseTool):
                 "[DRY_RUN] Instagram NÃO publicado (nenhuma chamada foi feita à Meta). "
                 f"image_url={image_url!r} caption={caption!r}" + _nota_travas(acoes, problemas)
             )
+        if marcas.ja_publicado("instagram"):
+            return "Instagram: já publicado nesta execução. Não repita: finalize."
         if problemas:
+            if produto is None:
+                marcas.marcar_bloqueio("sem produto pronto no catálogo")  # repetir não resolve
             return "ERRO: publicação no Instagram bloqueada pelas travas: " + "; ".join(problemas)
         api = MetaGraphAPI()
         try:
             result = api.publish_instagram_post(image_url=image_url, caption=caption)
+            marcas.marcar("instagram", {"post_id": result.post_id})
             return f"Publicado no Instagram com sucesso. post_id={result.post_id}"
         except MetaGraphAPIError as exc:
             return f"ERRO ao publicar no Instagram: {exc}"

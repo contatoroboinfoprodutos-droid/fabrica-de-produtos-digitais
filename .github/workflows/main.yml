@@ -82,8 +82,12 @@ jobs:
           # Padrao seguro: simula (nao publica). Para publicar de verdade, crie o Secret DRY_RUN = false
           DRY_RUN: ${{ secrets.DRY_RUN || 'true' }}
         run: |
-          # Em simulação, se der erro (429/503) tenta de novo com outro provedor (até 3 tentativas).
-          # Em modo real faz uma tentativa só, para nunca duplicar uma postagem.
+          # Até 3 tentativas, trocando de provedor de IA se der 429/503. Também em modo real: não há risco de
+          # postar em duplicidade, porque cada rede que publica deixa uma marca (POST_MARKER_DIR) e uma nova
+          # tentativa nunca repete a rede já publicada. Só repete se faltar rede e não houver bloqueio
+          # definitivo (ex.: nenhum produto pronto no catálogo).
+          export POST_MARKER_DIR="$RUNNER_TEMP/marcas"; rm -rf "$POST_MARKER_DIR"; mkdir -p "$POST_MARKER_DIR"
+          export POST_REDES="facebook,instagram"
           P1="$LLM_PROVIDER"
           ORDER="$P1"
           for P in gemini groq openrouter; do
@@ -92,14 +96,33 @@ jobs:
             if [ "$P" = "openrouter" ] && [ -z "$OPENROUTER_API_KEY" ]; then continue; fi
             ORDER="$ORDER $P"
           done
-          if [ "${DRY_RUN,,}" = "true" ]; then N=3; else N=1; fi
+          REAL=true; if [ "${DRY_RUN,,}" = "true" ]; then REAL=false; fi
+          N=3
           for i in $(seq 1 $N); do
-            PROV=$(echo $ORDER | cut -d' ' -f$i)
-            if [ -z "$PROV" ]; then break; fi
+            # se houver menos provedores que tentativas, a lista recomeça (melhor repetir um provedor do que desistir)
+            COUNT=$(echo $ORDER | wc -w)
+            PROV=$(echo $ORDER | cut -d' ' -f$(( (i - 1) % COUNT + 1 )))
             export LLM_PROVIDER="$PROV"
             echo "Tentativa $i de $N com o provedor $PROV"
-            python main.py && exit 0
-            echo "Tentativa $i de $N falhou."
+            RC=0
+            python main.py || RC=$?
+            if [ "$REAL" = false ]; then
+              if [ $RC -eq 0 ]; then exit 0; fi
+            else
+              ST=$(python -m fabrica_produtos marcas 2>/dev/null | head -1)
+              echo "Situação das publicações: $ST"
+              if [ "$ST" = "completo" ]; then exit 0; fi
+              if [ "$ST" = "bloqueado" ]; then
+                echo "::warning::Publicação bloqueada de propósito (veja o motivo acima). Nada a repetir."; exit 0
+              fi
+            fi
+            echo "Tentativa $i de $N sem concluir."
             if [ $i -lt $N ]; then sleep 30; fi
           done
+          if [ "$REAL" = true ]; then
+            ST=$(python -m fabrica_produtos marcas 2>/dev/null | head -1)
+            if [ "$ST" = "parcial" ]; then
+              echo "::error::Só uma das redes publicou (Facebook ou Instagram). Confira as duas antes de rodar de novo."
+            fi
+          fi
           exit 1
