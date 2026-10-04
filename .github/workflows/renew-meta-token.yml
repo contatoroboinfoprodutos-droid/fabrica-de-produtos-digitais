@@ -1,11 +1,15 @@
 name: Renovar token da Meta
 
-# Roda no dia 1 e no dia 15 de cada mês (06:00 UTC = 03:00 Brasília) e também manualmente.
-# Obs.: o cron não sabe "a cada 50 dias" ('*/50' no campo do dia vale só o dia 1).
-# Duas execuções por mês mantêm o token sempre bem dentro dos ~60 dias de validade
-# e dão uma segunda chance se uma execução falhar.
+# Roda toda semana (domingo) e nos dias 1 e 15 de cada mês, sempre às 06:00 UTC = 03:00 Brasília,
+# e também manualmente.
+# Obs.: o cron não sabe "a cada 7 dias" corridos; "0 6 * * 0" é todo domingo, o que dá o mesmo ritmo.
+# Se o dia 1 ou 15 cair num domingo, as duas execuções se enfileiram (concurrency) e a segunda só confere.
+# Renovar com frequência mantém o token sempre bem dentro dos ~60 dias de validade e dá várias chances
+# se uma execução falhar. A Meta decide a validade do token novo: o script só grava o Secret quando a
+# validade realmente aumentou e deixa a execução vermelha (aviso por e-mail) se faltarem 15 dias ou menos.
 on:
   schedule:
+    - cron: '0 6 * * 0'
     - cron: '0 6 1,15 * *'
   workflow_dispatch:
 
