@@ -1,0 +1,65 @@
+name: Guardiao (diagnostica falhas)
+
+# Quando um dos robôs falha, lê o log, reconhece a causa e abre (ou atualiza) uma Issue com o passo a passo
+# da correção. Só diagnostica: NÃO reexecuta robôs de anúncio (poderia duplicar post) e NÃO altera código nem
+# Secrets. A Issue chega por e-mail. Veja fabrica_produtos/guardiao.py.
+on:
+  workflow_run:
+    workflows:
+      - "Low Ticket (2 posts/dia)"
+      - "Executar Fabrica de Infoprodutos"
+      - "Fabrica de Produtos (criar, revisar, registrar)"
+      - "Renovar token da Meta"
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+  issues: write
+
+concurrency:
+  group: guardiao
+  cancel-in-progress: false
+
+jobs:
+  diagnosticar:
+    if: github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      RUN_ID: ${{ github.event.workflow_run.id }}
+      RUN_URL: ${{ github.event.workflow_run.html_url }}
+      NOME: ${{ github.event.workflow_run.name }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Lê o log e diagnostica
+        run: |
+          set -u
+          gh run view "$RUN_ID" --repo "$REPO" --log-failed > "$RUNNER_TEMP/log.txt" 2>/dev/null || true
+          if [ ! -s "$RUNNER_TEMP/log.txt" ]; then
+            gh run view "$RUN_ID" --repo "$REPO" --log > "$RUNNER_TEMP/log.txt" 2>/dev/null || true
+          fi
+          python -m fabrica_produtos guardiao --workflow "$NOME" --run-url "$RUN_URL" \
+            --log "$RUNNER_TEMP/log.txt" --saida-titulo "$RUNNER_TEMP/titulo.txt" --saida-corpo "$RUNNER_TEMP/corpo.md"
+
+      - name: Abre ou atualiza a Issue
+        run: |
+          set -u
+          TITULO="$(cat "$RUNNER_TEMP/titulo.txt")"
+          gh label create falha-automatica --repo "$REPO" --color B60205 \
+            --description "Aberta pelo Guardião quando um robô falha" 2>/dev/null || true
+          N="$(gh issue list --repo "$REPO" --label falha-automatica --state open --limit 100 \
+                 --json number,title | jq -r --arg t "$TITULO" '.[] | select(.title == $t) | .number' | head -1)"
+          if [ -n "$N" ]; then
+            gh issue comment "$N" --repo "$REPO" --body-file "$RUNNER_TEMP/corpo.md"
+            echo "Issue #$N atualizada."
+          else
+            gh issue create --repo "$REPO" --title "$TITULO" --body-file "$RUNNER_TEMP/corpo.md" \
+              --label falha-automatica
+          fi
