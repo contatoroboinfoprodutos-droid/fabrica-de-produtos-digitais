@@ -9,7 +9,7 @@ from fabrica_produtos import catalogo, config_fabrica as cfg, drive, plataformas
 from tests.fixtures import produto_bom
 from tests.test_cakto import Resp, cliente, produto_api
 
-VARS = ("GDRIVE_SERVICE_ACCOUNT_JSON", "GDRIVE_FOLDER_ID", "GDRIVE_OAUTH_CLIENT_ID",
+VARS = ("GDRIVE_SERVICE_ACCOUNT_JSON", "GDRIVE_CREDENTIALS_JSON", "GDRIVE_FOLDER_ID", "GDRIVE_OAUTH_CLIENT_ID",
         "GDRIVE_OAUTH_CLIENT_SECRET", "GDRIVE_OAUTH_REFRESH_TOKEN")
 
 
@@ -67,6 +67,14 @@ class ClienteDrive(BaseDrive):
         self.assertFalse(d.configurada())
         self.assertIn("GDRIVE_FOLDER_ID", d.faltando())
         os.environ["GDRIVE_SERVICE_ACCOUNT_JSON"] = "{}"
+        os.environ["GDRIVE_FOLDER_ID"] = "P"
+        self.assertEqual(drive.Drive().modo(), "conta_de_servico")
+        self.assertTrue(drive.Drive().configurada())
+
+    def test_aceita_o_nome_alternativo_do_secret_da_conta_de_servico(self):
+        for k in VARS:
+            os.environ.pop(k, None)
+        os.environ["GDRIVE_CREDENTIALS_JSON"] = "{}"
         os.environ["GDRIVE_FOLDER_ID"] = "P"
         self.assertEqual(drive.Drive().modo(), "conta_de_servico")
         self.assertTrue(drive.Drive().configurada())

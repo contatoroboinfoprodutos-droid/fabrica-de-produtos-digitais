@@ -56,7 +56,7 @@ e grava esse link na entrega do produto. Reenviar nunca duplica: ele procura o a
 
 Variável da pasta: `GDRIVE_FOLDER_ID` (o trecho final da URL da pasta), em **Variables** ou **Secrets**.
 
-**Modo A, conta de serviço** (Secret `GDRIVE_SERVICE_ACCOUNT_JSON`): só funciona se a pasta estiver num
+**Modo A, conta de serviço** (Secret `GDRIVE_SERVICE_ACCOUNT_JSON` ou `GDRIVE_CREDENTIALS_JSON`): só funciona se a pasta estiver num
 **Drive compartilhado** do Google Workspace e a conta de serviço (o `client_email` do JSON) for membro com
 permissão de Gerente de conteúdo ou Editor. Numa pasta do Meu Drive de conta pessoal o Google recusa o envio
 com `storageQuotaExceeded`.

@@ -1,7 +1,7 @@
 """Hospedagem do PDF no Google Drive (a Cakto entrega o produto por um link que aponta para o PDF).
 
 Dois modos de autenticação, escolhidos pelos Secrets presentes:
-  - conta de serviço: GDRIVE_SERVICE_ACCOUNT_JSON (+ GDRIVE_FOLDER_ID)
+  - conta de serviço: GDRIVE_SERVICE_ACCOUNT_JSON ou GDRIVE_CREDENTIALS_JSON (+ GDRIVE_FOLDER_ID)
   - OAuth da sua conta Google: GDRIVE_OAUTH_CLIENT_ID, GDRIVE_OAUTH_CLIENT_SECRET, GDRIVE_OAUTH_REFRESH_TOKEN
     (+ GDRIVE_FOLDER_ID)
 
@@ -26,7 +26,7 @@ UPLOAD = "https://www.googleapis.com/upload/drive/v3/files"
 TOKEN_URL = "https://oauth2.googleapis.com/token"
 ESCOPO = "https://www.googleapis.com/auth/drive"
 
-VARS_SA = ("GDRIVE_SERVICE_ACCOUNT_JSON",)
+VARS_SA = ("GDRIVE_SERVICE_ACCOUNT_JSON", "GDRIVE_CREDENTIALS_JSON")  # aceita os dois nomes do Secret
 VARS_OAUTH = ("GDRIVE_OAUTH_CLIENT_ID", "GDRIVE_OAUTH_CLIENT_SECRET", "GDRIVE_OAUTH_REFRESH_TOKEN")
 
 AVISO_COTA = ("o Google recusou o envio por falta de cota: contas de serviço não têm armazenamento e não "
@@ -40,6 +40,11 @@ class ErroDrive(Exception):
 
 def _env(nome: str) -> str:
     return os.getenv(nome, "").strip()
+
+
+def _json_conta() -> str:
+    """JSON da conta de serviço, em qualquer um dos nomes de Secret aceitos."""
+    return next((v for v in (_env(n) for n in VARS_SA) if v), "")
 
 
 def _motivo(r) -> str:
@@ -61,7 +66,7 @@ class Drive:
 
     # -- credenciais --
     def modo(self) -> str:
-        if _env("GDRIVE_SERVICE_ACCOUNT_JSON"):
+        if _json_conta():
             return "conta_de_servico"
         if all(_env(v) for v in VARS_OAUTH):
             return "oauth"
@@ -70,7 +75,7 @@ class Drive:
     def faltando(self) -> list[str]:
         falta = [] if self.pasta else ["GDRIVE_FOLDER_ID"]
         if not self.modo():
-            falta += ["GDRIVE_SERVICE_ACCOUNT_JSON (ou as três GDRIVE_OAUTH_*)"]
+            falta += ["GDRIVE_SERVICE_ACCOUNT_JSON ou GDRIVE_CREDENTIALS_JSON (ou as três GDRIVE_OAUTH_*)"]
         return falta
 
     def configurada(self) -> bool:
@@ -95,7 +100,7 @@ class Drive:
             from google.auth.transport.requests import Request
             from google.oauth2 import service_account
 
-            info = json.loads(_env("GDRIVE_SERVICE_ACCOUNT_JSON"))
+            info = json.loads(_json_conta())
             cred = service_account.Credentials.from_service_account_info(info, scopes=[ESCOPO])
             cred.refresh(Request())
             return str(cred.token or "")
