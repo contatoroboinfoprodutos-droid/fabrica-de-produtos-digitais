@@ -47,9 +47,9 @@ jobs:
       GDRIVE_OAUTH_CLIENT_ID: ${{ secrets.GDRIVE_OAUTH_CLIENT_ID }}
       GDRIVE_OAUTH_CLIENT_SECRET: ${{ secrets.GDRIVE_OAUTH_CLIENT_SECRET }}
       GDRIVE_OAUTH_REFRESH_TOKEN: ${{ secrets.GDRIVE_OAUTH_REFRESH_TOKEN }}
-      # --- Interruptores (Settings > Secrets and variables > Actions > Variables) ---
-      FABRICA_DRY_RUN: ${{ vars.FABRICA_DRY_RUN || 'true' }}   # true = não cria nada nas plataformas
-      FABRICA_PAUSADA: ${{ vars.FABRICA_PAUSADA || 'false' }}  # true = pausa a criação de produtos novos
+      # --- Interruptores (podem ficar em Variables OU em Secrets; Variables vale primeiro) ---
+      FABRICA_DRY_RUN: ${{ vars.FABRICA_DRY_RUN || secrets.FABRICA_DRY_RUN || 'true' }}   # true = não cria nada nas plataformas
+      FABRICA_PAUSADA: ${{ vars.FABRICA_PAUSADA || secrets.FABRICA_PAUSADA || 'false' }}  # true = pausa a criação de produtos novos
       PRODUTO_TOPICO: ${{ secrets.PRODUTO_TOPICO }}
       # --- entradas manuais (passam por variável de ambiente, nunca direto no script) ---
       EVENTO: ${{ github.event_name }}

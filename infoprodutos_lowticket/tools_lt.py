@@ -132,7 +132,14 @@ def lt_render_card(filename: str, headline: str, subline: str = "", tema_imagem:
         d.text(((x0 + x1) / 2, y0 + 70), preco, font=f_preco, fill=escuro, anchor="mm")
         d.text(((x0 + x1) / 2, y0 + 138), "LINK NA BIO", font=f_cta, fill=escuro, anchor="mm")
 
-    d.text((margem, 1240), cfg.BRAND_HANDLE, font=_font(44), fill=(250, 204, 21))
+    rodape = cfg.BRAND_HANDLE or cfg.BRAND_NAME
+    oferta = cfg.SLOTS.get(slot, {}).get("tipo") == "OFERTA"
+    limite_rodape = 500 if oferta else largura_max  # na oferta o selo de preço ocupa a direita
+    for tam_rodape in (44, 38, 32, 28, 24):
+        fonte_rodape = _font(tam_rodape)
+        if d.textlength(rodape, font=fonte_rodape) <= limite_rodape:
+            break
+    d.text((margem, 1240), rodape, font=fonte_rodape, fill=(250, 204, 21))
     path = os.path.join(cfg.OUTPUT_DIR, filename)
     img.save(path, "JPEG" if path.lower().endswith((".jpg", ".jpeg")) else "PNG")
     origem = "com foto do Unsplash" if foto is not None else "fundo liso (sem foto)"

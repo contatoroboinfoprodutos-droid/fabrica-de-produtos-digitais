@@ -39,7 +39,7 @@ PLATAFORMAS_ALVO = [p.strip().lower() for p in
                     if p.strip()]
 
 # --- Marca (para o PDF) ---
-MARCA = os.getenv("LT_BRAND_NAME", "").strip() or "Digital Rápido"
+MARCA = os.getenv("LT_BRAND_NAME", "").strip() or "Fábrica de Produtos Digitais"
 
 # --- Temas em rodízio quando ninguém define PRODUTO_TOPICO ---
 NICHOS = [

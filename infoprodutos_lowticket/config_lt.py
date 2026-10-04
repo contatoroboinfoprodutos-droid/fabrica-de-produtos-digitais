@@ -9,10 +9,10 @@ except ImportError:
     pass
 
 # --- Marca (Instagram + TikTok) ---
-# Nome escolhido: "Digital Rápido". Verifique se o @ está livre no Instagram e no TikTok.
+# Nome da página/perfil: "Fábrica de Produtos Digitais". Sem LT_BRAND_HANDLE, o rodapé dos cartões usa o nome.
 # Para trocar sem editar o código: defina LT_BRAND_NAME e LT_BRAND_HANDLE.
-BRAND_NAME = os.getenv("LT_BRAND_NAME", "Digital Rápido")
-BRAND_HANDLE = os.getenv("LT_BRAND_HANDLE", "@digitalrapido")
+BRAND_NAME = os.getenv("LT_BRAND_NAME", "").strip() or "Fábrica de Produtos Digitais"
+BRAND_HANDLE = os.getenv("LT_BRAND_HANDLE", "").strip()  # ex.: @seuperfil (vazio = usa o nome da marca)
 BRAND_TONE = "direto, prático, humano, sem promessas de enriquecimento fácil"
 
 # --- Produto ---
