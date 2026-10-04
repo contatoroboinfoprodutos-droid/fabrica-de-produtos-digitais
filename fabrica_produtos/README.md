@@ -131,7 +131,12 @@ a IA fora do ar) e abre uma Issue com o rótulo `falha-automatica`, com a causa 
 são removidos do trecho de log. **Só diagnostica**: não reexecuta robôs de anúncio (poderia duplicar post) e não
 altera código nem Secrets. Regras em `fabrica_produtos/guardiao.py`; para a causa "não reconhecida", leia o log.
 
-## Imagem de perfil
+## Imagens da marca (perfil e capa)
 
-`python -m tools.gerar_perfil` regenera `assets/perfil_digital_rapido.png` (1080x1080, com folga para o recorte
-redondo). A troca da foto de perfil é manual: o Instagram não oferece isso pela API.
+`python -m tools.gerar_perfil` gera `assets/perfil.png` (1080x1080, iniciais do nome da marca, com folga para o
+recorte redondo) e `python -m tools.gerar_capa` gera `assets/capa_facebook.png` (1640x856, texto na zona segura do
+computador e do celular). O nome vem de `LT_BRAND_NAME` (padrão: Fábrica de Produtos Digitais). Os cartões dos
+posts usam `LT_BRAND_HANDLE` no rodapé (ex.: `@seuperfil`); sem ele, usam o nome da marca.
+
+A troca das fotos e os textos do perfil são **manuais**: o Instagram não oferece isso pela API e nenhum robô
+daqui altera bio, descrição ou botão das páginas.
