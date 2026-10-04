@@ -139,6 +139,8 @@ class Cakto:
         nasce 'active' com entrega por e-mail (emailAccess) apontando para o PDF."""
         existente = self.buscar_por_nome(produto["nome"])
         if existente:
+            if url_entrega and existente.get("status") == "waiting_config":
+                existente = self.configurar_entrega(existente["id"], url_entrega)
             existente["existente"] = True
             return existente
         preco = parse_preco(produto.get("preco"))
@@ -154,6 +156,14 @@ class Cakto:
         r = self._resumo(self._req("POST", "/public_api/products/", json=corpo))
         r["existente"] = False
         return r
+
+    def configurar_entrega(self, produto_id: str, url_entrega: str) -> dict:
+        """Aponta a entrega por e-mail para o PDF e ativa o produto (PUT é atualização parcial na Cakto).
+        Só mexe em produto que está em 'waiting_config'; quem chama garante isso."""
+        self._req("PUT", f"/public_api/products/{produto_id}/",
+                  json={"contentDeliveries": ["emailAccess"], "emailAccessLink": url_entrega,
+                        "status": "active"})
+        return self._resumo(self._req("GET", f"/public_api/products/{produto_id}/"))
 
     # -- sondagem (somente leitura) --
     def sondar(self) -> list[str]:

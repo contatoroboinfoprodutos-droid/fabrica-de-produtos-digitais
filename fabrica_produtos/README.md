@@ -28,11 +28,12 @@ criador (CrewAI) → orientador (outro modelo) → criador corrige → travas em
 
 | Item | Situação |
 |---|---|
-| Criador, orientador, travas, catálogo, PDF, limites, cliente da Cakto | Testado (74 testes). IA e rede **simuladas** |
+| Criador, orientador, travas, catálogo, PDF, limites, cliente da Cakto | Testado (88 testes). IA e rede **simuladas** |
 | API real do CrewAI/Gemini/Groq | **Não testado aqui.** Valide na 1ª execução no Actions |
 | API da Cakto (token, listar, criar, obter) | Implementada conforme docs.cakto.com.br. **Não testada com a sua conta** |
 | Montagem do link `pay.cakto.com.br/<id da oferta>` | Vem da documentação. Confirme comprando/abrindo o link de um produto de teste |
-| **Hospedagem do PDF para a entrega** | **Não implementada.** Hoje o produto nasce `waiting_config` e você configura a entrega no painel |
+| Hospedagem do PDF no Google Drive e entrega na Cakto (`PUT` do produto) | Implementada, rede **simulada**. **Não testada com a sua conta.** Sem Drive configurado (ou se o envio falhar), o produto nasce `waiting_config` como antes |
+| **Conta de serviço grava em Meu Drive pessoal?** | **Não.** Ela não tem cota de armazenamento. Só funciona com pasta em **Drive compartilhado** (Google Workspace). Em Gmail comum use o modo OAuth abaixo. A ação `sondar` avisa antes de qualquer envio |
 
 A ação `sondar` (somente leitura) mostra no log se o login funciona, quantos produtos existem e quais campos
 a sua conta devolve. Rode-a primeiro.
@@ -46,6 +47,27 @@ a sua conta devolve. Rode-a primeiro.
    - `CAKTO_CLIENT_SECRET`
 3. Opcional, em **Variables**: `CAKTO_SALES_PAGE` (URL da página de vendas, se a Cakto exigir ao criar).
 4. A IA continua com os Secrets que você já usa: `GEMINI_API_KEY`, `GROQ_API_KEY`, `OPENROUTER_API_KEY`.
+
+### Hospedagem do PDF (Google Drive)
+
+A Cakto entrega o produto por um link enviado por e-mail; esse link precisa abrir o PDF. O robô envia o PDF
+para uma pasta do Drive, libera a leitura **por link** (quem tem o link abre; é o link que o comprador recebe)
+e grava esse link na entrega do produto. Reenviar nunca duplica: ele procura o arquivo pelo nome na pasta.
+
+Variável da pasta: `GDRIVE_FOLDER_ID` (o trecho final da URL da pasta), em **Variables** ou **Secrets**.
+
+**Modo A, conta de serviço** (Secret `GDRIVE_SERVICE_ACCOUNT_JSON`): só funciona se a pasta estiver num
+**Drive compartilhado** do Google Workspace e a conta de serviço (o `client_email` do JSON) for membro com
+permissão de Gerente de conteúdo ou Editor. Numa pasta do Meu Drive de conta pessoal o Google recusa o envio
+com `storageQuotaExceeded`.
+
+**Modo B, OAuth da sua conta Google** (para Gmail comum; usa a cota do seu Drive). Secrets:
+`GDRIVE_OAUTH_CLIENT_ID`, `GDRIVE_OAUTH_CLIENT_SECRET`, `GDRIVE_OAUTH_REFRESH_TOKEN`. Crie o cliente OAuth
+(tipo "Aplicativo da Web" ou "Desktop") no Google Cloud Console, com a API do Drive ativada, e gere o
+refresh token uma vez com o escopo `https://www.googleapis.com/auth/drive.file`. Nunca cole esses valores no chat.
+
+Se os dois modos estiverem configurados, vale a conta de serviço. Rode `acao = sondar`: o resumo mostra o modo,
+se a pasta é acessível e, no modo A, se ela está num Drive compartilhado.
 
 
 ## Interruptores (Settings → Secrets and variables → Actions → **Variables**)
@@ -61,9 +83,11 @@ a sua conta devolve. Rode-a primeiro.
 
 1. Rode **Actions → Fabrica de Produtos → Run workflow** com `acao = sondar`. Leia o resumo da execução.
 2. Rode com `acao = criar`. O resumo mostra cada decisão do orientador e das travas.
-3. Com `FABRICA_DRY_RUN=false` o robô cria o produto na Cakto em `waiting_config` (não pode ser vendido sem
-   entrega). Baixe o pacote (artefato `pacotes-de-produto`), configure a entrega com o PDF no painel e
-   **ative** o produto. Mantenha o nome exato da ficha.
+3. Com `FABRICA_DRY_RUN=false` e o Drive funcionando, o robô hospeda o PDF e cria o produto já **ativo**, com
+   a entrega por e-mail apontando para o PDF; um produto que já exista em `waiting_config` com o mesmo nome
+   é atualizado (entrega + ativação). Sem Drive (ou se o envio falhar), o produto nasce em `waiting_config`:
+   baixe o pacote (artefato `pacotes-de-produto`), configure a entrega com o PDF no painel e **ative** o
+   produto. Mantenha o nome exato da ficha.
 4. A cada 6 horas (ou com `acao = verificar`) o robô procura o produto e o libera se estiver ativo. Se a API
    não devolver o link, rode `acao = definir-link` com o `produto_id` e o `link_compra`.
 5. Só então os robôs de anúncio passam a divulgar. Antes disso, o post de oferta é bloqueado em modo real.

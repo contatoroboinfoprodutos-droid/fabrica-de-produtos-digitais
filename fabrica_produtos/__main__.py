@@ -62,8 +62,11 @@ def cmd_sondar() -> int:
     from . import plataformas
 
     linhas = ["# Sondagem das plataformas (somente leitura)"]
+    from .drive import Drive
+
     for plat in plataformas.instanciar(cfg.PLATAFORMAS_ALVO):
         linhas += plat.sondar() + [""]
+    linhas += Drive().sondar() + [""]
     _saida("\n".join(linhas))
     return 0
 

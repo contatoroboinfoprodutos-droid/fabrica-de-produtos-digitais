@@ -12,6 +12,7 @@ import os
 import re
 
 from . import catalogo, config_fabrica as cfg, plataformas
+from .drive import Drive, ErroDrive
 from .pdf_produto import gerar_pdf
 from .texto import normalizar
 from .travas import link_ok
@@ -43,7 +44,9 @@ def _ficha(produto: dict, pdf_nome: str) -> str:
         f"## Descrição da oferta (copie e cole)\n\n{produto.get('descricao_oferta', '')}\n\n"
         f"## O que vem dentro\n\n{itens}\n\n"
         f"## Para liberar o anúncio\n\n"
-        f"1. No painel da Cakto, abra o produto, configure a entrega com o PDF acima e **ative** o produto.\n"
+        f"1. Se o relatório da execução disser que o PDF foi hospedado no Drive, o produto já foi criado ativo e "
+        f"com a entrega configurada: pule para o passo 2. Se não, no painel da Cakto abra o produto, configure "
+        f"a entrega com o PDF acima e **ative** o produto.\n"
         f"2. Rode a ação `verificar` no GitHub (Actions → Fábrica de Produtos), ou espere a verificação "
         f"automática de 6 em 6 horas. O robô só libera se o produto estiver **ativo** e a API devolver o link.\n"
         f"3. Se a API não devolver o link, copie o link de compra do painel e rode a ação `definir-link` "
@@ -63,6 +66,23 @@ def gerar_pacote(produto: dict) -> dict:
     return {"pasta": pasta, "pdf": pdf, "ficha": ficha}
 
 
+def publicar_pdf(produto: dict, pacote: dict, linhas: list[str]) -> str | None:
+    """Hospeda o PDF no Drive e devolve o link, ou None (e explica no relatório) se não for possível.
+    Nunca levanta exceção: sem link o produto simplesmente nasce em 'waiting_config'."""
+    drive = Drive()
+    if not drive.configurada():
+        linhas.append(f"drive: não configurado (faltam {', '.join(drive.faltando())}); o PDF não foi hospedado")
+        return None
+    nome = f"{produto['id']}-{os.path.basename(pacote['pdf'])}"
+    try:
+        url = drive.publicar_pdf(pacote["pdf"], nome)
+    except ErroDrive as e:
+        linhas.append(f"{e}. O produto será criado sem a entrega (waiting_config)")
+        return None
+    linhas.append("drive: PDF hospedado e com leitura por link liberada")
+    return url
+
+
 def registrar_produto(produto_id: str, dry_run: bool | None = None, nomes: list[str] | None = None) -> list[str]:
     """Devolve as linhas do relatório. Não levanta exceção por falha de plataforma."""
     dry_run = cfg.DRY_RUN if dry_run is None else dry_run
@@ -76,14 +96,18 @@ def registrar_produto(produto_id: str, dry_run: bool | None = None, nomes: list[
     if dry_run:
         linhas.append("DRY_RUN: nenhuma criação foi feita nas plataformas (leitura continua permitida)")
     else:
-        for plat in plataformas.instanciar(nomes or cfg.PLATAFORMAS_ALVO):
+        plats = [pl for pl in plataformas.instanciar(nomes or cfg.PLATAFORMAS_ALVO)]
+        # Só hospeda o PDF se houver alguma plataforma pronta para usá-lo (evita envio à toa).
+        url_entrega = publicar_pdf(p, pacote, linhas) if any(pl.configurada() for pl in plats) else None
+        extra = {"url_entrega": url_entrega} if url_entrega else {}
+        for plat in plats:
             if not plat.configurada():
                 linhas.append(f"{plat.nome}: pulada (faltam variáveis: {', '.join(plat.faltando())})")
                 continue
             # criar_produto procura pelo nome antes de criar: repetir a chamada após um erro nunca duplica.
             for tentativa in (1, 2):
                 try:
-                    r = plat.criar_produto(p, pacote["pdf"])
+                    r = plat.criar_produto(p, pacote["pdf"], **extra)
                     origem = "já existia" if r.get("existente") else "criado"
                     linhas.append(f"{plat.nome}: produto {origem} (id {r.get('id', '?')}, "
                                   f"status {r.get('status', '?')})")
