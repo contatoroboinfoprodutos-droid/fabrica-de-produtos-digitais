@@ -104,3 +104,20 @@ se a pasta é acessível e, no modo A, se ela está num Drive compartilhado.
 
 Acessar o painel da Cakto de forma automatizada (navegador) pode violar os termos dela e suspender a conta.
 Esta versão **não** faz isso: usa só a API oficial.
+
+## Tentar de novo sem postar em duplicidade
+
+Os dois robôs de anúncio (Low Ticket e Executar Fabrica de Infoprodutos) tentam até 3 vezes por execução,
+inclusive em modo real, trocando de provedor de IA se um falhar (se houver menos provedores que tentativas, a
+lista recomeça). O que impede o post duplicado são as **marcas de publicação** (`fabrica_produtos/marcas.py`):
+
+- cada rede (Facebook, Instagram) que a Meta aceita deixa uma marca; uma nova tentativa **nunca repete uma rede
+  já publicada** e, se só o Instagram falhou, refaz só o Instagram, sem enviar a foto de novo ao Facebook;
+- a execução só termina com sucesso quando as **duas** redes publicaram. Se a IA termina "bem" mas esquece de
+  publicar, isso conta como falha e a tentativa é repetida;
+- **bloqueio definitivo** (post de oferta sem produto pronto, credenciais da Meta ausentes) encerra na hora com
+  aviso, sem gastar tokens em tentativas inúteis;
+- se, depois das 3 tentativas, só uma rede tiver publicado, a execução fica vermelha com a mensagem
+  "Só uma das redes publicou": confira as duas antes de rodar de novo à mão.
+
+Em simulação (DRY_RUN) nada disso é gravado e o comportamento é o de antes.

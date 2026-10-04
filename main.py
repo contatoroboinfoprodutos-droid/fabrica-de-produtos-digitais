@@ -35,7 +35,7 @@ except (ImportError, AttributeError):
 
 from config import get_settings
 from crew import InfoprodutoFactoryCrew
-from fabrica_produtos import catalogo
+from fabrica_produtos import catalogo, marcas
 
 TOPICO_PADRAO = "Produto em destaque do catálogo desta semana"
 
@@ -133,6 +133,7 @@ def main() -> None:
             "Nenhum produto 'pronto' no catálogo: sem produto real não há o que anunciar. "
             "Nada foi publicado. Rode a Fábrica de Produtos e libere o produto (verificar ou definir-link)."
         )
+        marcas.marcar_bloqueio("sem produto pronto no catálogo")  # o workflow não repete a tentativa
         return
     if produto is not None:
         args.topic = consulta_imagem = produto["nome"]
