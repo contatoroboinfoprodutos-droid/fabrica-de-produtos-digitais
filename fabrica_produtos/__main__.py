@@ -94,18 +94,39 @@ def cmd_marcas() -> int:
     return 0
 
 
+def cmd_guardiao(args) -> int:
+    """Lê o log de uma execução que falhou e grava o título e o corpo da issue (sem segredos)."""
+    from . import guardiao
+
+    try:
+        with open(args.log, encoding="utf-8", errors="replace") as f:
+            log = f.read()
+    except OSError:
+        log = ""
+    titulo, corpo = guardiao.montar_issue(args.workflow, args.run_url, log)
+    with open(args.saida_titulo, "w", encoding="utf-8") as f:
+        f.write(titulo)
+    with open(args.saida_corpo, "w", encoding="utf-8") as f:
+        f.write(corpo)
+    print(titulo)
+    return 0
+
+
 def main(argv=None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     ap = argparse.ArgumentParser(prog="fabrica_produtos")
     sub = ap.add_subparsers(dest="cmd", required=True)
     for nome in ("criar", "verificar", "sondar", "status", "marcas"):
         sub.add_parser(nome)
+    g = sub.add_parser("guardiao")
+    for flag in ("--workflow", "--run-url", "--log", "--saida-titulo", "--saida-corpo"):
+        g.add_argument(flag, required=True)
     d = sub.add_parser("definir-link")
     d.add_argument("--id", required=True)
     d.add_argument("--link", required=True)
     d.add_argument("--plataforma", default="")
     args = ap.parse_args(argv)
-    return {"criar": cmd_criar, "verificar": cmd_verificar, "sondar": cmd_sondar, "status": cmd_status, "marcas": cmd_marcas,
+    return {"criar": cmd_criar, "verificar": cmd_verificar, "sondar": cmd_sondar, "status": cmd_status, "marcas": cmd_marcas, "guardiao": lambda: cmd_guardiao(args),
             "definir-link": lambda: cmd_definir_link(args)}[args.cmd]()
 
 

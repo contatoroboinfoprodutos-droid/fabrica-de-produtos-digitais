@@ -121,3 +121,17 @@ lista recomeça). O que impede o post duplicado são as **marcas de publicação
   "Só uma das redes publicou": confira as duas antes de rodar de novo à mão.
 
 Em simulação (DRY_RUN) nada disso é gravado e o comportamento é o de antes.
+
+## Guardião (diagnóstico de falhas)
+
+O workflow `guardiao.yml` dispara quando Low Ticket, Executar Fabrica de Infoprodutos, Fabrica de Produtos ou
+Renovar token da Meta falham. Ele lê o log, reconhece a causa por regras fixas (sem IA, para funcionar mesmo com
+a IA fora do ar) e abre uma Issue com o rótulo `falha-automatica`, com a causa e o passo a passo da correção
+(a Issue chega por e-mail). Falha repetida pela mesma causa comenta na mesma Issue, não abre outra. Segredos
+são removidos do trecho de log. **Só diagnostica**: não reexecuta robôs de anúncio (poderia duplicar post) e não
+altera código nem Secrets. Regras em `fabrica_produtos/guardiao.py`; para a causa "não reconhecida", leia o log.
+
+## Imagem de perfil
+
+`python -m tools.gerar_perfil` regenera `assets/perfil_digital_rapido.png` (1080x1080, com folga para o recorte
+redondo). A troca da foto de perfil é manual: o Instagram não oferece isso pela API.
