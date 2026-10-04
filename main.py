@@ -35,6 +35,7 @@ except (ImportError, AttributeError):
 
 from config import get_settings
 from crew import InfoprodutoFactoryCrew
+from fabrica_produtos import catalogo
 
 TOPICO_PADRAO = "Produto em destaque do catálogo desta semana"
 
@@ -87,6 +88,16 @@ def buscar_imagem_unsplash(consulta, logger):
         return None
 
 
+def descrever_produto(produto):
+    """Texto do produto REAL do catálogo, sem chaves {} (o CrewAI as interpreta nas tasks)."""
+    if not produto:
+        return ("NENHUM produto 'pronto' no catálogo. Isto é apenas uma SIMULAÇÃO: crie uma ideia de produto "
+                "fictícia só para o teste e diga claramente no relatório que ela é fictícia.")
+    txt = (f"NOME: {produto['nome']}. PRECO: {produto['preco_texto']}. PROMESSA: {produto['promessa']}. "
+           f"CONTEUDOS: {'; '.join(produto['conteudos'])}.")
+    return txt.replace("{", "(").replace("}", ")")
+
+
 def main() -> None:
     load_dotenv()
     logging.basicConfig(level=logging.INFO)
@@ -115,6 +126,18 @@ def main() -> None:
         args.topic, consulta_imagem = escolher_nicho()
         logger.info("Nicho da rodada (rodízio): %s", args.topic)
 
+    # Produto: a campanha é SEMPRE de um produto real do catálogo (status 'pronto', com link de compra).
+    produto = catalogo.produto_ativo()
+    if produto is None and not settings.dry_run:
+        logger.warning(
+            "Nenhum produto 'pronto' no catálogo: sem produto real não há o que anunciar. "
+            "Nada foi publicado. Rode a Fábrica de Produtos e libere o produto (verificar ou definir-link)."
+        )
+        return
+    if produto is not None:
+        args.topic = consulta_imagem = produto["nome"]
+        logger.info("Produto da rodada (catálogo): %s (%s)", produto["nome"], produto["preco_texto"])
+
     # Imagem: URL fixa tem prioridade; senão, busca no Unsplash.
     if not args.image_url:
         args.image_url = buscar_imagem_unsplash(consulta_imagem, logger)
@@ -139,7 +162,8 @@ def main() -> None:
     logger.info("Gerando campanha para: %s", args.topic)
 
     resultado = InfoprodutoFactoryCrew().crew().kickoff(
-        inputs={"produto_topico": args.topic, "imagem_padrao_url": args.image_url}
+        inputs={"produto_topico": args.topic, "imagem_padrao_url": args.image_url,
+                "produto_catalogo": descrever_produto(produto)}
     )
 
     print("\n" + "=" * 80)

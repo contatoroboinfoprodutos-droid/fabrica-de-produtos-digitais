@@ -18,6 +18,19 @@ BRAND_TONE = "direto, prático, humano, sem promessas de enriquecimento fácil"
 # --- Produto ---
 OFFER_PRICE = "R$ 7,00"
 OFFER_LINK = os.getenv("LT_OFFER_LINK", "").strip() or "https://SEU-LINK-DE-CHECKOUT"  # vazio no workflow = sem link real
+
+# Catálogo único (fabrica_produtos): se houver um produto 'pronto' (com link de compra válido),
+# ele manda no preço, no link e no que o anúncio pode afirmar. Sem produto pronto, o post de OFERTA
+# é bloqueado em modo real (travas.py), porque não há o que vender nem o que conferir.
+try:
+    from fabrica_produtos import catalogo as _catalogo
+    PRODUTO = _catalogo.produto_ativo()
+except Exception:  # catálogo ausente ou ilegível: segue sem produto
+    PRODUTO = None
+if PRODUTO:
+    OFFER_PRICE = PRODUTO["preco_texto"]
+    OFFER_LINK = PRODUTO["link_compra"]
+
 NICHE = os.getenv("LT_NICHE", "infoprodutos digitais sobre assuntos diversos, sempre com temas atuais e em alta")
 
 # --- LLM (Gemini por padrão; OpenRouter como reserva; Groq opcional) ---

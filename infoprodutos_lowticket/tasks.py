@@ -4,11 +4,23 @@ from .agents import (trend_scout_agent, copywriter_lowticket_agent,
                      visual_director_agent, publisher_infoproduto_agent)
 
 
+def _contexto_produto() -> str:
+    """Dados REAIS do produto do catálogo. O anúncio só pode afirmar o que está aqui."""
+    p = cfg.PRODUTO
+    if not p:
+        return ""
+    txt = (f"\nPRODUTO REAL DO CATÁLOGO (fale SOMENTE do que está aqui; não invente benefícios, bônus, "
+           f"garantias, números nem depoimentos): nome '{p['nome']}'; promessa '{p['promessa']}'; "
+           f"o que vem dentro: {'; '.join(p['conteudos'])}.")
+    return txt.replace("{", "(").replace("}", ")")  # o CrewAI interpreta chaves em descrições
+
+
 def build_lt_tasks(slot: str):
     s = cfg.SLOTS[slot]
     lt_task_pesquisa = Task(
         description=(f"Post {s['tipo']} ({slot}). Marca: {cfg.BRAND_NAME}. Nicho: {cfg.NICHE}.\n"
-                     f"Objetivo: {s['descricao']}\nEntregue 3 dores/ganchos e escolha o melhor."),
+                     f"Objetivo: {s['descricao']}{_contexto_produto()}\n"
+                     "Entregue 3 dores/ganchos e escolha o melhor."),
         expected_output="Lista de 3 ganchos e o escolhido, com justificativa de 1 linha.",
         agent=trend_scout_agent)
 
@@ -21,7 +33,8 @@ def build_lt_tasks(slot: str):
                      f"2) SUBLINE (máx 100 caracteres)\n3) LEGENDA (até 900 caracteres, com 5 hashtags)\n"
                      "4) TEMA_IMAGEM: 2 a 4 palavras EM INGLÊS que descrevam uma foto de fundo "
                      "relacionada ao tema (ex.: 'woman studying laptop'). Evite pessoas famosas, marcas e textos.\n"
-                     f"{extra}\nSem promessa de ganho garantido. "
+                     f"{extra}{_contexto_produto()}\nSem promessa de ganho garantido. "
+                     "Nunca use as expressões: primeira venda, lucro, testado, comprovado, garantido. "
                      "A LEGENDA deve ser texto puro: sem markdown (nada de ** ou *), sem colchetes e sem links inventados."),
         expected_output="HEADLINE, SUBLINE, LEGENDA e TEMA_IMAGEM rotulados.",
         agent=copywriter_lowticket_agent, context=[lt_task_pesquisa])
