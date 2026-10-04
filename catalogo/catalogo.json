@@ -1,4 +1,53 @@
 {
   "versao": 1,
-  "produtos": []
+  "produtos": [
+    {
+      "nome": "Guia Prático de Finanças Pessoais: Do Zero à Organização Mensal",
+      "tipo": "Guia prático em PDF",
+      "preco": 8.9,
+      "promessa": "Aprenda a mapear seus gastos, separar custos essenciais, iniciar uma reserva para imprevistos e manter o controle do orçamento mensal.",
+      "publico": "Iniciantes que desejam organizar as contas do mês e criar um controle financeiro claro sem termos técnicos complexos.",
+      "conteudos": [
+        "Mapeamento completo das entradas e saídas financeiras",
+        "Separação entre despesas essenciais e estilo de vida",
+        "Construção passo a passo da reserva para imprevistos",
+        "Definição de limites de gastos e rotina de revisão semanal"
+      ],
+      "descricao_oferta": "Este guia prático em PDF foi elaborado para quem deseja dar os primeiros passos na organização do próprio dinheiro de forma simples e direta. Sem planilhas complicadas ou termos difíceis, você vai aprender a registrar seus gastos com clareza, diferenciar necessidades básicas de despesas supérfluas, planejar uma reserva financeira básica para imprevistos e estabelecer limites semanais de consumo. Cada capítulo traz orientações passo a passo, exemplos práticos do cotidiano e mini-exercícios para colocar o conteúdo em prática imediatamente no seu dia a dia.",
+      "capitulos": [
+        {
+          "titulo": "Mapeamento completo das entradas e saídas financeiras",
+          "texto": "Para organizar as finanças com clareza, o primeiro passo indispensável é registrar com precisão para onde o seu dinheiro vai no dia a dia. Execute esse processo inicial seguindo três etapas práticas: primeiro, reúna o extrato bancário consolidado dos últimos trinta dias e a fatura mais recente do seu cartão de crédito. Segundo, liste cada uma das despesas individualmente em um caderno físico ou em um documento digital simples, anotando sem exceção a data da operação, o item comprado e o valor monetário exato. Terceiro, calcule a soma total dessas saídas e compare o resultado final diretamente com a sua renda líquida recebida no mesmo período de trinta dias.\n\nExemplo prático: imagine uma renda mensal líquida de 2.500 reais. Ao somar todos os comprovantes, descobre-se um gasto total de 2.420 reais no mês, sendo 350 reais destinados apenas a pequenos lanches na rua e assinaturas de serviços esquecidos. Esse registro detalhado mostra com clareza uma sobra real de 80 reais, eliminando de vez aquela sensação angustiante de não saber para onde o salário foi.\n\nMini-exercício: acesse agora o aplicativo da sua conta bancária principal, pegue as transações realizadas nos últimos sete dias e liste em uma folha de papel cada compra feita, sem arredondar valores. Some tudo e descubra exatamente quanto saiu do seu bolso nesta última semana."
+        },
+        {
+          "titulo": "Separação entre despesas essenciais e estilo de vida",
+          "texto": "Depois de listar minuciosamente as saídas do mês, o passo seguinte consiste em classificar cada desembolso para compreender a estrutura dos seus custos. Adote três etapas simples: primeiro, trace duas colunas nomeadas como Gastos Essenciais e Gastos Não Essenciais. Na coluna de essenciais, anote exclusivamente aquilo que garante sua sobrevivência e manutenção da atividade profissional, como aluguel ou parcela da moradia, alimentação básica de supermercado, contas de luz e água, transporte e despesas básicas de saúde. Na coluna de não essenciais, liste refeições fora de casa, serviços de streaming, pedidos por aplicativo e aquisições casuais. Terceiro, calcule o valor total de cada coluna e veja quanto cada grupo representa do seu orçamento geral.\n\nExemplo prático: ao somar 2.000 reais em gastos totais, uma pessoa observa que 1.400 reais correspondem a moradia, alimentação básica e contas, o que representa 70 por cento da despesa. Os 600 reais restantes são despesas dispensáveis de conveniência. Essa visualização mostra onde é possível fazer cortes conscientes sem comprometer as necessidades fundamentais.\n\nMini-exercício: analise a relação dos seus gastos da última semana e marque a letra E ao lado do que for essencial e a letra N ao lado do que for supérfluo. Some os dois subtotais e anote a diferença monetária entre eles."
+        },
+        {
+          "titulo": "Construção passo a passo da reserva para imprevistos",
+          "texto": "A reserva de emergência é uma quantia guardada exclusivamente para proteger você diante de situações imprevistas, como consertos domiciliares urgentes ou despesas médicas inesperadas. Monte essa proteção financeira em três passos objetivos: primeiro, estabeleça uma meta inicial conservadora e viável, equivalente ao valor de um mês das suas despesas essenciais identificadas no capítulo anterior. Segundo, escolha uma modalidade conservadora pós-fixada com liquidez diária, como títulos públicos pós-fixados ou contas remuneradas tradicionais, garantindo que o dinheiro possa ser retirado imediatamente se surgir uma necessidade real. Terceiro, determine um valor fixo mensal e programe a transferência para o mesmo dia em que o seu salário for creditado na conta corrente.\n\nExemplo prático: suponha que o seu custo de vida essencial somou 1.600 reais. Essa será a sua meta de partida. Se você reservar 200 reais todos os meses logo após receber o pagamento, ao término de oito meses terá uma reserva completa equivalente a um mês de sobrevivência tranquila.\n\nMini-exercício: escreva em um papel o valor exato do seu custo de vida essencial mensal e estipule uma quantia mensal realista que você possa transferir já no próximo recebimento para iniciar a sua reserva financeira."
+        },
+        {
+          "titulo": "Definição de limites de gastos e rotina de revisão semanal",
+          "texto": "Manter o orçamento no prumo exige um plano prévio de despesas semanais e uma rotina consistente de checagem. Implemente esse controle contínuo em três passos diretos: primeiro, defina um teto máximo de valor em reais para os gastos flexíveis do mês e divida esse montante em quatro partes iguais, estipulando o orçamento disponível para cada semana. Segundo, escolha um dia fixo da semana, como o domingo à noite, para dedicar dez minutos à conferência dos comprovantes e verificação do saldo restante. Terceiro, caso você ultrapasse a meta em uma determinada semana, reduza de imediato o teto da semana seguinte no mesmo valor excedido, preservando o equilíbrio mensal estabelecido.\n\nExemplo prático: com um limite mensal de 400 reais destinado ao lazer, você dispõe de 100 reais por semana. Se na primeira semana você gastar 140 reais em um passeio, ajustará o limite da segunda semana para 60 reais. Essa compensação prática evita o endividamento e impede surpresas negativas no fim do mês.\n\nMini-exercício: escolha uma categoria de compras onde você costuma perder a medida, estipule um limite financeiro em reais para os próximos sete dias e confira diariamente se o saldo acumulado continua abaixo do teto definido."
+        }
+      ],
+      "id": "p20261004-1",
+      "criado_em": "2026-10-04T12:57:11-03:00",
+      "preco_texto": "R$ 8,90",
+      "status": "aguardando_cadastro",
+      "plataforma": "",
+      "link_compra": "",
+      "historico": [
+        {
+          "quando": "2026-10-04T12:57:11-03:00",
+          "evento": "aprovado por orientador + travas de código em 1 rodada(s)"
+        },
+        {
+          "quando": "2026-10-04T12:57:11-03:00",
+          "evento": "pacote pronto; aguardando cadastro na plataforma"
+        }
+      ]
+    }
+  ]
 }
