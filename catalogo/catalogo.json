@@ -48,6 +48,54 @@
           "evento": "pacote pronto; aguardando cadastro na plataforma"
         }
       ]
+    },
+    {
+      "nome": "Guia Prático de Produtividade e Organização da Rotina",
+      "tipo": "Guia PDF",
+      "preco": 8.9,
+      "promessa": "Ajude a organizar seu tempo e reduzir interrupções no dia a dia.",
+      "publico": "Profissionais, estudantes e freelancers que buscam melhorar a gestão da rotina.",
+      "conteudos": [
+        "Mapeamento da rotina atual",
+        "Blocos de foco",
+        "Ferramentas de apoio",
+        "Revisão semanal"
+      ],
+      "descricao_oferta": "Um guia prático em PDF dividido em quatro capítulos curtos. Cada capítulo traz passos concretos, exemplos reais, mini‑exercícios e resumos rápidos para mapear sua rotina, criar blocos de foco, usar ferramentas simples e fazer revisões semanais, facilitando a organização e a produtividade diária.",
+      "capitulos": [
+        {
+          "titulo": "Capítulo 1 – Mapeando a rotina atual",
+          "texto": "**Passo 1 – Registre**\nAnote tudo o que fez nas últimas 48 horas, incluindo início e fim de cada atividade, pausas e interrupções. Use papel ou um aplicativo de notas simples.\n\n**Passo 2 – Classifique**\nSepare as tarefas em categorias como trabalho, estudo, casa, lazer e outras.\n\n**Passo 3 – Identifique interrupções**\nMarque as ocorrências de notificações, conversas inesperadas ou navegação sem objetivo.\n\n**Passo 4 – Priorize as atividades que realmente avançam seus objetivos**\nDestaque as tarefas que contribuem diretamente para seus projetos e que podem ser agrupadas em blocos de foco.\n\n*Exemplo:* Ana anotou que gastou 25 minutos verificando redes sociais antes de iniciar o trabalho, atrasando seu início. Ao classificar, percebeu que esse tempo poderia ser usado para revisar e‑mails urgentes.\n\n*Mini‑exercício*\nPegue uma folha A4, registre tudo que fez nas últimas 24 horas, classifique nas categorias indicadas e destaque as três maiores fontes de perda de tempo.\n\n*Resumo rápido*\n- Registre todas as atividades; - Classifique por categoria; - Identifique interrupções frequentes; - Priorize as atividades que realmente avançam seus objetivos."
+        },
+        {
+          "titulo": "Capítulo 2 – Construindo blocos de foco",
+          "texto": "**Passo 1 – Identifique horários de pico**\nObserve, ao longo de uma semana, quando sua energia está mais alta. Anote períodos de 2 a 3 horas em que se sente alerta.\n\n**Passo 2 – Planeje blocos de 45‑60 minutos**\nReserve nesses períodos blocos de trabalho concentrado, definindo a tarefa principal de cada bloco. A duração dos blocos pode ser ajustada de acordo com a carga de trabalho de cada pessoa.\n\n**Passo 3 – Insira pausas revitalizantes**\nEntre blocos, faça pausas curtas de 5‑10 minutos. Levante, alongue, beba água ou respire profundamente.\n\n**Passo 4 – Proteja o bloco de distrações**\nDesative notificações, feche abas não relacionadas e avise quem for necessário que estará indisponível.\n\n*Exemplo:* Bruno percebe que das 10h às 12h está mais focado. Ele cria dois blocos de 55 minutos: o primeiro para escrever o relatório mensal, o segundo para analisar dados, com pausas de 7 minutos para caminhar pelo escritório.\n\n*Mini‑exercício*\nNa noite anterior, planeje três blocos de foco para o próximo dia, indicando a tarefa principal, a duração e a pausa entre eles.\n\n*Resumo rápido*\n- Identifique seus picos de energia; - Planeje blocos de 45‑60 min; - Insira pausas de 5‑10 min; - Proteja o bloco de interrupções."
+        },
+        {
+          "titulo": "Capítulo 3 – Ferramentas simples de apoio",
+          "texto": "**Passo 1 – Use lista de tarefas**\nEscolha um caderno ou um aplicativo de lista. Registre todas as demandas do dia, do maior ao menor.\n\n**Passo 2 – Aplique a regra dos 2 minutos**\nSe a tarefa pode ser concluída em até dois minutos, execute‑a imediatamente, evitando acúmulo.\n\n**Passo 3 – Estruture com timer Pomodoro**\nDefina 25 minutos de trabalho focado seguido de 5 minutos de pausa. O timer Pomodoro pode ser configurado em aplicativos gratuitos para facilitar a prática.\n\n**Passo 4 – Revise ao final do dia**\nMarque o que foi concluído, migre o que ficou pendente para o próximo dia e anote breves observações sobre a eficiência.\n\n*Exemplo:* Carla tem a lista de compras, contas a pagar e leitura de artigos. Ao receber um e‑mail que leva menos de dois minutos, responde na hora, evitando que pequenas tarefas se acumulem. Depois, inicia um Pomodoro de 25 minutos para redigir um artigo, pausando para alongar.\n\n*Mini‑exercício*\nEscolha uma tarefa que leve menos de dois minutos, execute‑a imediatamente e, em seguida, inicie um timer Pomodoro para a tarefa maior que está na sua lista.\n\n*Resumo rápido*\n- Use lista de tarefas; - Aplique a regra dos 2 min; - Estruture trabalho com Pomodoro; - Revise resultados ao fim do dia."
+        },
+        {
+          "titulo": "Capítulo 4 – Revisão semanal e ajustes",
+          "texto": "**Passo 1 – Reserve 30 minutos de revisão**\nEscolha um momento tranquilo, preferencialmente no domingo, e bloqueie o horário na agenda. Caso o domingo não seja viável, a revisão semanal pode ser feita em outro dia da semana.\n\n**Passo 2 – Avalie metas cumpridas e pendentes**\nListe as tarefas planejadas na semana e marque as concluídas. Anote as que ficaram incompletas e o motivo.\n\n**Passo 3 – Detecte gargalos**\nIdentifique padrões de interrupções, blocos que geraram fadiga ou estimativas de tempo incorretas.\n\n**Passo 4 – Ajuste a próxima semana**\nRedefina a duração dos blocos, realoque tarefas críticas para novos picos de energia e elimine fontes de distração identificadas.\n\n*Exemplo:* Diego percebeu que todas as suas chamadas de cliente aconteciam durante o bloco da tarde, interrompendo o trabalho profundo. Ele decidiu mover as chamadas para a manhã e reservar a tarde para projetos que exigem concentração.\n\n*Mini‑exercício*\nCrie uma tabela com duas colunas – “Concluído” e “Ajustar” – e preencha com as principais tarefas da última semana, anotando uma ação de melhoria para cada item que precisou de ajuste.\n\n*Resumo rápido*\n- Reserve tempo fixo para revisão; - Avalie metas e pendências; - Detecte gargalos recorrentes; - Ajuste blocos e prioridades para a semana seguinte."
+        }
+      ],
+      "id": "p20261005-1",
+      "criado_em": "2026-10-05T06:17:00-03:00",
+      "preco_texto": "R$ 8,90",
+      "status": "pronto",
+      "plataforma": "cakto",
+      "link_compra": "https://pay.cakto.com.br/gjfmbn3",
+      "historico": [
+        {
+          "quando": "2026-10-05T06:17:00-03:00",
+          "evento": "aprovado por orientador + travas de código em 3 rodada(s)"
+        },
+        {
+          "quando": "2026-10-05T06:17:05-03:00",
+          "evento": "registrado na cakto por API; link recebido"
+        }
+      ]
     }
   ]
 }
