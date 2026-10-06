@@ -96,6 +96,54 @@
           "evento": "registrado na cakto por API; link recebido"
         }
       ]
+    },
+    {
+      "nome": "Guia Prático de Receitas Fit e Alimentação Saudável – Cardápio e Marmitas",
+      "tipo": "Guia em PDF",
+      "preco": 8.9,
+      "promessa": "Aprenda a planejar, preparar e conservar refeições fit práticas e nutritivas, economizando tempo na cozinha.",
+      "publico": "Quem busca alimentação saudável com praticidade no dia a dia.",
+      "conteudos": [
+        "Planejamento de cardápio semanal fit",
+        "Técnicas de preparo rápido e saudável",
+        "Substituições inteligentes para reduzir calorias",
+        "Montagem de marmitas balanceadas para a semana"
+      ],
+      "descricao_oferta": "Um guia de texto simples, dividido em quatro capítulos, que ensina passo a passo como organizar seu cardápio semanal, escolher técnicas de cozimento que preservam nutrientes, substituir ingredientes por opções mais leves e montar marmitas nutritivas para a rotina. Ideal para quem busca praticidade sem abrir mão do sabor e da saúde.",
+      "capitulos": [
+        {
+          "titulo": "Capítulo 1 – Planejamento de Cardápio Semanal Fit",
+          "texto": "Planejar o cardápio semanal é a base para uma alimentação saudável e prática. Quando você decide antes o que vai comer, reduz compras impulsivas, evita desperdício e garante a variedade de nutrientes necessários para o corpo.\n\n1. Defina quantas refeições fará por dia e quais são seus objetivos (mais proteína, menos açúcar, etc.).\n2. Liste alimentos que gosta e que se encaixam nesses objetivos, separando-os por grupos: cereais integrais, legumes, proteínas magras e gorduras boas.\n3. Crie uma matriz simples: dias da semana × refeições, preenchendo cada célula com um prato que combine os grupos escolhidos.\n4. Transforme o cardápio em lista de compras organizada por categorias para evitar idas desnecessárias ao mercado.\n\nExemplo: segunda‑feira – café da manhã: aveia com frutas vermelhas; almoço: quinoa, peito de frango grelhado e brócolis; jantar: sopa de abóbora com gengibre.\n\nMini‑exercício: usando a mesma estrutura, crie seu próprio cardápio para dois dias, anotando os alimentos principais de cada refeição e a lista de compras correspondente.\n\nResumo: Um planejamento bem feito economiza tempo, dinheiro e garante equilíbrio nutricional ao longo da semana."
+        },
+        {
+          "titulo": "Capítulo 2 – Técnicas de Preparo Rápido e Saudável",
+          "texto": "A escolha do método de cozimento influencia tempo, sabor e valor nutricional. Priorize técnicas que preservam vitaminas e exigem pouca gordura: vapor, grelha, panela de pressão e assado rápido.\n\nPassos concretos:\n1. Selecione o alimento e a técnica mais adequada (ex.: legumes no vapor, peixe na grelha).\n2. Tempere com ervas, limão ou especiarias, evitando molhos industrializados.\n3. Use utensílios que aceleram o processo, como grelha antiaderente, panela de pressão elétrica ou micro‑ondas.\n4. Cozinhe em lotes para otimizar o tempo.\n\nExemplo prático: peito de frango marinado em alho, alecrim e suco de limão, grelhado 5 min de cada lado, acompanhado de legumes variados cozidos no vapor por 8 min.\n\nUtensílios opcionais que podem acelerar ainda mais o preparo:\n- Air‑fryer\n- Panela de cerâmica antiaderente\n- Processador de alimentos\n- Balança digital de precisão\n- Recipiente de silicone para cozimento a vapor\n\nMini‑exercício: escolha um alimento que costuma cozinhar e prepare‑o usando vapor ou grelha, anotando o tempo gasto e a diferença de sabor percebida.\n\nResumo: Técnicas rápidas preservam nutrientes, reduzem o uso de gordura e tornam o preparo diário mais eficiente."
+        },
+        {
+          "titulo": "Capítulo 3 – Substituições Inteligentes para Reduzir Calorias e Aumentar Nutrientes",
+          "texto": "Trocar ingredientes por versões mais leves ou mais nutritivas transforma uma receita sem mudar o prazer de consumo. Identifique três pontos de ajuste: carboidrato, gordura e açúcar.\n\nPassos:\n1. Substitua farinha branca por integral ou de aveia.\n2. Use iogurte natural no lugar de maionese.\n3. Troque óleo por purê de abacate ou caldo de legumes.\n4. Inclua vegetais escondidos, como purê de batata doce em bolos.\n\nExemplo: brownie de batata doce – bata batata doce cozida, cacau em pó, mel, ovos e farinha de aveia, asse 20 min. A textura fica úmida e o teor de fibra aumenta.\n\nTabela comparativa de valores calóricos (por 100 g):\nIngrediente          Calorias   Substituição      Calorias\n---                  ---        ---               ---\nFarinha de trigo     364        Farinha de aveia  389\nAzeite de oliva      884        Purê de abacate  160\nAçúcar refinado      387        Mel               304\nArroz branco         130        Quinoa            120\n\nMini‑exercício: pegue sua receita favorita de lanche (sanduíche, bolo ou molho) e substitua um ingrediente por uma alternativa mais saudável, anotando a mudança de quantidade e o resultado final.\n\nResumo: Substituições estratégicas reduzem calorias, aumentam fibras e mantêm o sabor, facilitando uma alimentação mais equilibrada."
+        },
+        {
+          "titulo": "Capítulo 4 – Montagem de Marmitas Balanceadas para a Semana",
+          "texto": "Organizar marmitas evita escolhas impulsivas e garante a ingestão de todos os macronutrientes. Siga o passo a passo:\n\n1. Calcule a porção de proteína (150‑200 g), carboidrato complexo (½ xícara de quinoa, arroz integral ou batata doce) e legumes (pelo menos metade do prato).\n2. Use potes de vidro com divisórias ou dois recipientes pequenos para separar os grupos.\n3. Prepare os alimentos em lote: cozinhe o grão, grelhe a proteína e asse os legumes.\n4. Monte a marmita colocando a proteína em um canto, o carboidrato no centro e os legumes ao redor; adicione um molho leve à parte.\n\nExemplo: marmita com quinoa, tofu marinado e assado, mix de abobrinha, pimentão e cenoura, e um fio de azeite com ervas.\n\nDicas de conservação e validade:\n- Resfrie os alimentos antes de fechar o pote para evitar condensação.\n- Armazene as marmitas na geladeira por até 4 dias; para períodos maiores, congele por até 2 meses.\n- Etiquete cada pote com a data de preparo.\n- Reaqueça apenas a porção que será consumida, evitando múltiplos ciclos de aquecimento.\n\nMini‑exercício: planeje a montagem de marmitas para três dias, listando os alimentos, as quantidades e o tipo de pote que será usado.\n\nResumo: Marmitas bem montadas garantem variedade, segurança alimentar e praticidade para a semana inteira."
+        }
+      ],
+      "id": "p20261006-1",
+      "criado_em": "2026-10-06T06:17:36-03:00",
+      "preco_texto": "R$ 8,90",
+      "status": "pronto",
+      "plataforma": "cakto",
+      "link_compra": "https://pay.cakto.com.br/v93eacj",
+      "historico": [
+        {
+          "quando": "2026-10-06T06:17:36-03:00",
+          "evento": "aprovado por orientador + travas de código em 2 rodada(s)"
+        },
+        {
+          "quando": "2026-10-06T06:17:42-03:00",
+          "evento": "registrado na cakto por API; link recebido"
+        }
+      ]
     }
   ]
 }
