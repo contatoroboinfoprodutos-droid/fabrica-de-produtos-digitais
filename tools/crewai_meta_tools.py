@@ -18,7 +18,7 @@ def _preparar(texto: str):
     """Travas em código: o texto só pode afirmar o que está no catálogo. Devolve
     (produto, texto_corrigido, ajustes, problemas). Problemas = não publicar em modo real."""
     produto = catalogo.produto_ativo()
-    legenda, acoes, problemas = travas.preparar_legenda_com_link(produto, texto, "VITRINE")
+    legenda, acoes, problemas = travas.preparar_legenda(produto, texto, "VITRINE")
     return produto, legenda, acoes, problemas
 
 

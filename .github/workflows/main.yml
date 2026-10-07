@@ -80,7 +80,6 @@ jobs:
           INSTAGRAM_ACCOUNT_ID: ${{ secrets.INSTAGRAM_ACCOUNT_ID }}
           BUSINESS_PORTFOLIO_ID: ${{ secrets.BUSINESS_PORTFOLIO_ID }}
           # Padrao seguro: simula (nao publica). Para publicar de verdade, crie o Secret DRY_RUN = false
-          FABRICA_PRODUTO_FIXO: ${{ vars.FABRICA_PRODUTO_FIXO || secrets.FABRICA_PRODUTO_FIXO }}   # id do produto a anunciar (vazio = o mais recente)
           DRY_RUN: ${{ secrets.DRY_RUN || 'true' }}
         run: |
           # Até 3 tentativas, trocando de provedor de IA se der 429/503. Também em modo real: não há risco de

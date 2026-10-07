@@ -140,14 +140,3 @@ posts usam `LT_BRAND_HANDLE` no rodapé (ex.: `@seuperfil`); sem ele, usam o nom
 
 A troca das fotos e os textos do perfil são **manuais**: o Instagram não oferece isso pela API e nenhum robô
 daqui altera bio, descrição ou botão das páginas.
-
-## Link de compra em todo post e produto fixo
-
-- **Todo post** (valor, vitrine ou oferta) sai com o link de compra do catálogo e o aviso "Link também na bio",
-  antes das hashtags finais (`travas.garantir_link`). No Facebook o link é clicável; no Instagram a legenda não
-  clica, então **o link da bio precisa ser colocado à mão** (Editar perfil → Links), igual ao do produto anunciado.
-  Sem produto `pronto`, o post de valor sai sem link e o de oferta é bloqueado, como antes.
-- **O produto anunciado muda sozinho**: por padrão é o `pronto` mais recente, e a fábrica cria 1 produto por dia.
-  Para o link da bio nunca ficar desatualizado, defina `FABRICA_PRODUTO_FIXO` (Variables ou Secrets) com o id do
-  produto (ex.: `p20261005-1`; veja os ids com a ação `status`). Id inexistente ou ainda não pronto: avisa no log e
-  volta ao mais recente. Para parar de criar produtos novos, use `FABRICA_PAUSADA=true`.
