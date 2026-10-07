@@ -185,7 +185,7 @@ def lt_publicar_meta(filename: str, caption: str) -> str:
     Args: filename (arquivo gerado, ex: post_manha.png), caption (legenda final)."""
     caption = _limpar_legenda(caption)
     # Travas em código (fabrica_produtos/travas.py): corrigem o que dá sem inventar nada e bloqueiam o resto.
-    caption, acoes, travas_problemas = travas.preparar_legenda(cfg.PRODUTO, caption, _tipo_do_arquivo(filename))
+    caption, acoes, travas_problemas = travas.preparar_legenda_com_link(cfg.PRODUTO, caption, _tipo_do_arquivo(filename))
     problemas = list(travas_problemas)
     problema_link = _problema_do_link(filename, caption)
     if problema_link and problema_link not in problemas:
