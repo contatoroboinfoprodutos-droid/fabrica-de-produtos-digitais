@@ -277,3 +277,42 @@ def preparar_legenda(produto: dict | None, texto: str, tipo: str) -> tuple[str, 
             acoes.append("acrescentou o link do catálogo")
 
     return t, acoes, verificar_anuncio(produto, t, tipo)
+
+
+# ----------------------------------------------------------------------------
+# Link sempre visível no texto do post
+# ----------------------------------------------------------------------------
+_RE_HASHTAGS_FINAIS = re.compile(r"(\s+(?:#[\wÀ-ÿ]+[ \t]*){2,})\s*$")
+
+
+def garantir_link(produto: dict | None, texto: str) -> tuple[str, bool]:
+    """Garante, em TODO post (valor, vitrine ou oferta), o link de compra do catálogo no texto e o aviso de que
+    o link também está na bio. Entra antes das hashtags finais. Sem produto pronto não mexe em nada.
+    Instagram não torna link de legenda clicável, por isso o aviso da bio; no Facebook o link é clicável."""
+    texto = (texto or "").strip()
+    link = str((produto or {}).get("link_compra") or "").strip()
+    if produto is None or produto.get("status") != "pronto" or not link_ok(link):
+        return texto, False
+    tem_link = link in texto
+    tem_bio = "na bio" in sem_acentos(texto).lower()
+    if tem_link and tem_bio:
+        return texto, False
+    linhas = []
+    if not tem_link:
+        linhas.append(f"\U0001F517 Link de compra: {link}")
+    if not tem_bio:
+        linhas.append("Link também na bio.")
+    rodape = "\n".join(linhas)
+    m = _RE_HASHTAGS_FINAIS.search(texto)
+    if m:
+        return f"{texto[:m.start()].rstrip()}\n\n{rodape}\n\n{m.group(1).strip()}", True
+    return f"{texto}\n\n{rodape}", True
+
+
+def preparar_legenda_com_link(produto: dict | None, texto: str, tipo: str) -> tuple[str, list[str], list[str]]:
+    """preparar_legenda + link visível no fim, e a verificação roda de novo sobre o texto final."""
+    legenda, acoes, _ = preparar_legenda(produto, texto, tipo)
+    legenda, mexeu = garantir_link(produto, legenda)
+    if mexeu:
+        acoes = acoes + ["acrescentou o link de compra e o aviso de link na bio"]
+    return legenda, acoes, verificar_anuncio(produto, legenda, tipo)

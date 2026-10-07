@@ -8,6 +8,7 @@ Status do produto:
 """
 import datetime
 import json
+import logging
 import os
 import tempfile
 
@@ -117,8 +118,18 @@ def criados_hoje(caminho: str | None = None) -> int:
 
 
 def produto_ativo(caminho: str | None = None) -> dict | None:
-    """O produto mais recente com status 'pronto' E link de compra válido (é o que os robôs anunciam)."""
-    for p in reversed(carregar(caminho)["produtos"]):
-        if p.get("status") == "pronto" and link_ok(p.get("link_compra", "")):
-            return p
-    return None
+    """O produto que os robôs anunciam: status 'pronto' E link de compra válido.
+
+    Por padrão, o mais recente. Se FABRICA_PRODUTO_FIXO tiver o id de um produto pronto (ex.: p20261005-1),
+    os robôs anunciam SEMPRE esse, e o link da bio do Instagram fica certo. Id inexistente ou ainda não pronto:
+    avisa no log e volta ao mais recente (melhor anunciar do que parar tudo por um erro de digitação)."""
+    prontos = [p for p in carregar(caminho)["produtos"]
+               if p.get("status") == "pronto" and link_ok(p.get("link_compra", ""))]
+    fixo = os.getenv("FABRICA_PRODUTO_FIXO", "").strip()
+    if fixo:
+        for p in prontos:
+            if p.get("id") == fixo:
+                return p
+        logging.getLogger("fabrica").warning(
+            "FABRICA_PRODUTO_FIXO=%s não é um produto 'pronto' com link: usando o mais recente.", fixo)
+    return prontos[-1] if prontos else None
