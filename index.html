@@ -63,7 +63,7 @@ async function carregar(){
     if(Array.isArray(data)) prods = data;
     else if(data.produtos) prods = data.produtos;
     else if(data.pacotes) prods = data.pacotes;
-    prods = prods.filter(p=>p && (p.nome||p.titulo));
+    prods = prods.filter(p=>p && (p.nome||p.titulo) && (!p.status || p.status==='pronto') && /^https:\/\/pay\.cakto\.com\.br\/.+/.test(p.link_compra||p.link||''));
     prods.sort((a,b)=> new Date(b.criado_em||0) - new Date(a.criado_em||0));
     TODOS = prods;
     FILTRADOS = prods;
@@ -73,6 +73,7 @@ async function carregar(){
     document.getElementById('lista').innerHTML = '<p style="color:#facc15;text-align:center">Erro ao carregar catalogo/catalogo.json</p>';
   }
 }
+const esc = t => String(t==null?'':t).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function render(reset){
   if(reset){ MOSTRADOS = POR_PAGINA; document.getElementById('lista').innerHTML=''; }
   const lista = document.getElementById('lista');
@@ -85,7 +86,7 @@ function render(reset){
     const preco = p.preco_texto || (p.preco? 'R$ '+String(p.preco).replace('.',',') : 'R$ 8,90');
     const div = document.createElement('div');
     div.className='card';
-    div.innerHTML = `<div class="meta"><h3>${nome}</h3><span class="price">${preco}</span></div><div class="desc">${desc}</div><a class="btn" href="${link}" target="_blank">COMPRAR AGORA</a>`;
+    div.innerHTML = `<div class="meta"><h3>${esc(nome)}</h3><span class="price">${esc(preco)}</span></div><div class="desc">${esc(desc)}</div><a class="btn" href="${esc(link)}" target="_blank" rel="noopener">COMPRAR AGORA</a>`;
     lista.appendChild(div);
   });
   const total = FILTRADOS.length;

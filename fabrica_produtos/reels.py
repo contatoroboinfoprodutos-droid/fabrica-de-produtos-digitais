@@ -76,7 +76,7 @@ def montar(p: dict, bruto: dict) -> dict:
     return {
         "id_produto": p["id"],
         "gancho_3s": gancho,
-        "roteiro_15s": f"[0-3s] {gancho} [3-10s] {dor} [10-15s] Guia em PDF por {preco}. {CTA}",
+        "roteiro_15s": f"[0-3s] {gancho} [3-10s] {dor} [10-15s] Em PDF por {preco}. {CTA}",
         "legenda": legenda,
         "cta": CTA,
     }

@@ -7,8 +7,11 @@ Saída padrão: docs/link-na-bio.html (publicada pelo GitHub Pages).
 import html
 import logging
 import os
+import re
+from urllib.parse import urlparse
 
 from . import catalogo, config_fabrica as cfg, travas
+from .texto import formatar_preco, parse_preco
 
 logger = logging.getLogger("fabrica")
 
@@ -19,10 +22,47 @@ SELO = "Todos em PDF imediato"
 MAX_DESC = 140
 
 
+_RE_PRECO_TEXTO = re.compile(r"^R\$ \d{1,3}(?:\.\d{3})*,\d{2}$")
+HOST_CAKTO = "pay.cakto.com.br"
+MAX_NOME = 60   # o nome precisa ter MENOS que isto para caber no card
+
+
+def link_cakto(link: str) -> bool:
+    u = urlparse(str(link or "").strip())
+    return u.scheme == "https" and u.hostname == HOST_CAKTO and len(u.path.strip("/")) > 0
+
+
+def validar_catalogo(caminho: str | None = None) -> list[str]:
+    """Lista de problemas do catálogo (vazia = tudo certo). Produto 'reprovado' não é conferido.
+    - link_compra: precisa ser da Cakto (https://pay.cakto.com.br/...); obrigatório quando o produto está 'pronto'
+    - preco_texto: formato 'R$ 8,90' e igual ao preco numérico
+    - nome: menos de 60 caracteres"""
+    problemas = []
+    for p in catalogo.carregar(caminho)["produtos"]:
+        if p.get("status") == "reprovado":
+            continue
+        pid, link = p.get("id", "?"), str(p.get("link_compra") or "").strip()
+        if link and not link_cakto(link):
+            problemas.append(f"{pid}: link_compra não é da Cakto ({link[:60]})")
+        elif not link and p.get("status") == "pronto":
+            problemas.append(f"{pid}: produto 'pronto' sem link_compra")
+        texto = str(p.get("preco_texto") or "")
+        if not _RE_PRECO_TEXTO.match(texto):
+            problemas.append(f"{pid}: preco_texto fora do formato 'R$ 8,90' ({texto or 'vazio'})")
+        elif parse_preco(p.get("preco")) is None or formatar_preco(parse_preco(p.get("preco"))) != texto:
+            problemas.append(f"{pid}: preco_texto ({texto}) diferente de preco ({p.get('preco')})")
+        nome = str(p.get("nome") or "").strip()
+        if not nome:
+            problemas.append(f"{pid}: nome vazio")
+        elif len(nome) >= MAX_NOME:
+            problemas.append(f"{pid}: nome com {len(nome)} caracteres (precisa ter menos de {MAX_NOME} para caber no card)")
+    return problemas
+
+
 def produtos_do_hub(caminho: str | None = None) -> list[dict]:
     """Só produtos 'pronto' com link de compra válido, do mais novo para o mais antigo."""
     ps = [p for p in catalogo.carregar(caminho)["produtos"]
-          if p.get("status") == "pronto" and travas.link_ok(p.get("link_compra", ""))]
+          if p.get("status") == "pronto" and link_cakto(p.get("link_compra", ""))]
     return list(reversed(ps))
 
 

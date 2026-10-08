@@ -131,20 +131,34 @@ def produto_em_texto(p: dict) -> str:
 # ----------------------------------------------------------------------------
 # Prompts (sem chaves {} de propósito)
 # ----------------------------------------------------------------------------
-def prompt_criador(tema: str, existentes: list[str], feedback: list[str] | None, anterior: dict | None) -> str:
-    minimo = int(travas.palavras_minimas(cfg.PRECO_MAX) * 1.25)
+def tipo_da_rodada(n: int | None = None) -> str:
+    """Nível do próximo produto (guia, pacote ou combo), por rodízio sobre o tamanho do catálogo.
+    Respeita FABRICA_TIPOS: nível desligado cai para 'guia' (ou o primeiro ativo)."""
+    if n is None:
+        n = len(catalogo.carregar()["produtos"])
+    t = cfg.ROTACAO[n % len(cfg.ROTACAO)]
+    return t if t in cfg.TIPOS_ATIVOS else ("guia" if "guia" in cfg.TIPOS_ATIVOS else cfg.TIPOS_ATIVOS[0])
+
+
+def prompt_criador(tema: str, existentes: list[str], feedback: list[str] | None, anterior: dict | None,
+                   tipo: str | None = None) -> str:
+    tipo = tipo if tipo in cfg.TIPOS else "guia"
+    preco = cfg.TIPOS[tipo]
+    minimo = int(travas.palavras_minimas(preco) * 1.25)
+    por_cap = minimo // cfg.MAX_CONTEUDOS
     partes = [
         f"Crie UM infoproduto digital NOVO sobre o tema: {_sem_chaves(tema)}.",
         "Formato: guia prático em texto, que será entregue em PDF. Nada de vídeo, planilha ou curso em vídeo.",
-        f"Preço (chave preco, número em reais): entre {cfg.PRECO_MIN:.2f} e {cfg.PRECO_MAX:.2f}.",
-        f"Conteúdo REAL e útil: de {cfg.MIN_CONTEUDOS} a {cfg.MAX_CONTEUDOS} capítulos, um para cada item de "
-        f"conteudos, na mesma ordem. Cada capítulo com 150 a 250 palavras, passos concretos, um exemplo e um "
-        f"mini-exercício. No total, pelo menos {minimo} palavras nos capítulos.",
+        f"Nível do produto: {cfg.ROTULOS[tipo]}. Preço FIXO (chave preco): {preco:.2f}. Use tipo=\"{tipo}\".",
+        f"Conteúdo REAL e útil: {cfg.MAX_CONTEUDOS} capítulos, um para cada item de "
+        f"conteudos, na mesma ordem. Cada capítulo com {por_cap} a {por_cap + 100} palavras, passos concretos, "
+        f"um exemplo e um mini-exercício. No total, pelo menos {minimo} palavras nos capítulos, porque o "
+        f"comprador paga por esse volume.",
         "Não invente dados, estatísticas, estudos, depoimentos, nem nomes de pessoas ou empresas.",
         "É PROIBIDO prometer ganho financeiro, falar em lucro, primeira venda, resultado garantido, cura, "
         "ou dizer que o método é testado ou comprovado. A promessa deve ser realista (tempo economizado, "
         "organização, aprendizado) e só pode dizer o que os capítulos entregam.",
-        "Chaves do objeto JSON: nome (até 80 caracteres), tipo, preco, promessa (uma frase), publico (uma frase), "
+        "Chaves do objeto JSON: nome (até 55 caracteres), tipo, preco, promessa (uma frase), publico (uma frase), "
         "conteudos (lista de textos curtos), descricao_oferta (até 600 caracteres, texto simples, sem markdown), "
         "capitulos (lista de objetos, cada um com as chaves titulo e texto).",
     ]
@@ -212,7 +226,7 @@ def _avaliar(executor, produto: dict, prov_criador: str | None):
     return probs, orient
 
 
-def fabricar(tema: str, max_rodadas: int | None = None, executor=None) -> dict:
+def fabricar(tema: str, max_rodadas: int | None = None, executor=None, tipo: str | None = None) -> dict:
     """Devolve {status, produto, motivo, aprovado_por, rodadas}.
     status: 'aprovado' | 'reprovado' | 'adiado' (nenhum provedor de IA respondeu; tenta de novo na próxima)."""
     executor = executor or executar_com_reserva
@@ -222,7 +236,7 @@ def fabricar(tema: str, max_rodadas: int | None = None, executor=None) -> dict:
 
     for n in range(1, max_rodadas + 1):
         try:
-            bruto, prov_criador = executor("criador", prompt_criador(tema, existentes, feedback, candidato),
+            bruto, prov_criador = executor("criador", prompt_criador(tema, existentes, feedback, candidato, tipo),
                                            SAIDA_CRIADOR, None)
         except RuntimeError as e:
             return {"status": "adiado", "produto": None, "rodadas": rodadas, "aprovado_por": "",
@@ -235,6 +249,8 @@ def fabricar(tema: str, max_rodadas: int | None = None, executor=None) -> dict:
             feedback = ["A resposta anterior não era um objeto JSON válido com nome e capitulos. "
                         "Responda somente com o JSON completo."]
             continue
+        if tipo in cfg.TIPOS:  # nível e preço são decididos em código, nunca pela IA
+            novo["tipo"], novo["preco"] = cfg.ROTULOS[tipo], cfg.TIPOS[tipo]
         candidato = novo
         probs, orient = _avaliar(executor, candidato, prov_criador)
         ultimo = orient
@@ -284,9 +300,9 @@ def tema_da_rodada(topico: str = "") -> str:
     return cfg.NICHOS[n % len(cfg.NICHOS)]
 
 
-def criar_e_guardar(tema: str, executor=None) -> dict:
+def criar_e_guardar(tema: str, executor=None, tipo: str | None = None) -> dict:
     """Fabrica um produto e registra o resultado no catálogo (aprovado ou reprovado)."""
-    res = fabricar(tema, executor=executor)
+    res = fabricar(tema, executor=executor, tipo=tipo or tipo_da_rodada())
     if res["status"] == "aprovado":
         reg = catalogo.adicionar(res["produto"], "aprovado",
                                  f"aprovado por {res['aprovado_por']} em {len(res['rodadas'])} rodada(s)")
