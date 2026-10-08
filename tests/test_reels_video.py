@@ -116,6 +116,39 @@ class Video(unittest.TestCase):
             self.assertIsNone(r["musica"])
             self.assertTrue(os.path.getsize(r["arquivo"]) > 1000)
 
+    def test_happy_mp3_existente_vira_audio_a_0_15(self):
+        """Marmita -> happy.mp3 presente: o vídeo final tem áudio e o nível fica ~16,5 dB abaixo do original (0,15 = -16,48 dB)."""
+        import re
+
+        def pico(arq):
+            # trecho estável (0,1-0,35 s): fora do arranque do AAC e do fade-out final
+            r = subprocess.run(["ffmpeg", "-nostats", "-i", arq, "-vn", "-af", "atrim=0.1:0.35,volumedetect",
+                                "-f", "null", "-"], capture_output=True, text=True)
+            m = re.search(r"mean_volume: (-?[\d.]+) dB", r.stderr)
+            return float(m.group(1)) if m else None
+
+        with tempfile.TemporaryDirectory() as d:
+            mus = os.path.join(d, "music")
+            os.makedirs(mus)
+            mp3 = os.path.join(mus, "happy.mp3")
+            gen = subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "lavfi", "-i",
+                                  "sine=frequency=440:duration=0.5,volume=4", "-c:a", "libmp3lame", mp3])
+            if gen.returncode != 0:
+                self.skipTest("sem libmp3lame")
+            antes = pico(mp3)
+            r = gr.gerar_video(prod("Marmita Fit Variada"), os.path.join(d, "v.mp4"), duracao=1.0, pasta_musica=mus)
+            self.assertEqual(os.path.basename(r["musica"]), "happy.mp3")
+            self.assertEqual(r["motivo"], "")
+            self.assertIn("audio", [x["codec_type"] for x in self.sonda(r["arquivo"])])
+            depois = pico(r["arquivo"])
+            self.assertIsNotNone(depois)
+            self.assertAlmostEqual(depois - antes, -16.48, delta=1.0)
+            os.remove(mp3)                                     # sem o arquivo: sem áudio e com motivo claro
+            r = gr.gerar_video(prod("Marmita Fit Variada"), os.path.join(d, "w.mp4"), duracao=1.0, pasta_musica=mus)
+            self.assertIsNone(r["musica"])
+            self.assertIn("ausente", r["motivo"])
+            self.assertEqual([x["codec_type"] for x in self.sonda(r["arquivo"])], ["video"])
+
     def test_main_gera_mp4_e_legendas_e_catalogo_vazio_nao_falha(self):
         with tempfile.TemporaryDirectory() as d:
             cat = os.path.join(d, "c.json")

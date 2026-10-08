@@ -11,6 +11,7 @@ até você colocar os mp3 em assets/music/.
 import os
 import sys
 
+SEM_API = "Pixabay Music sem API - usando mp3 manuais de assets/music/"
 ENDPOINT = os.getenv("PIXABAY_MUSIC_ENDPOINT", "").strip() or "https://pixabay.com/api/music/"
 PASTA = os.getenv("REELS_MUSICA", "").strip() or "assets/music"
 FAIXAS = {
@@ -53,12 +54,14 @@ def baixar(nome: str, consulta: str, chave: str, http=None) -> str:
     try:
         http = http or __import__("requests")
         r = http.get(ENDPOINT, params={"key": chave, "q": consulta, "per_page": 3}, timeout=30)
+        if r.status_code in (404, 405, 410):
+            return f"{nome}.mp3: {SEM_API}"
         if r.status_code != 200:
-            return f"{nome}.mp3: a Pixabay respondeu HTTP {r.status_code} (o endpoint de música pode não existir); pulado"
+            return f"{nome}.mp3: a Pixabay respondeu HTTP {r.status_code}; pulado ({SEM_API})"
         try:
             hits = r.json().get("hits") or []
-        except ValueError:
-            return f"{nome}.mp3: resposta da Pixabay não é JSON (endpoint de música inexistente?); pulado"
+        except (ValueError, AttributeError):
+            return f"{nome}.mp3: {SEM_API}"
         url = link_do_hit(hits[0]) if hits else None
         if not url:
             return f"{nome}.mp3: nenhum resultado com link de download para '{consulta}'; pulado"
@@ -84,7 +87,7 @@ def baixar(nome: str, consulta: str, chave: str, http=None) -> str:
 def main(http=None) -> int:
     chave = os.getenv("PIXABAY_API_KEY", "").strip()
     if not chave:
-        print("PIXABAY_API_KEY não definida: nenhuma música baixada (os Reels usam os mp3 de assets/music, se houver).")
+        print("PIXABAY_API_KEY não definida: " + SEM_API)
         return 0
     for nome, consulta in FAIXAS.items():
         print(baixar(nome, consulta, chave, http))

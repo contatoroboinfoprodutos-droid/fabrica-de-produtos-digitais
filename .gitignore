@@ -27,3 +27,4 @@ output_lowticket/
 
 # Reels gerados (baixe pelo artifact do workflow)
 reels/*.mp4
+!assets/music/*.mp3

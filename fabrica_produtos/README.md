@@ -178,3 +178,7 @@ Os mp4 não são commitados (ficam só no artifact, 14 dias). Link do CTA: `REEL
 `scripts/fetch_music.py` tenta baixar `happy/lofi/corporate.mp3` com a chave `PIXABAY_API_KEY` (Secret). Nunca quebra o fluxo e não sobrescreve
 um mp3 válido já existente em `assets/music/`. A documentação pública da Pixabay só lista APIs de imagens e vídeos; se o endpoint de música
 não existir, o script avisa e pula. O jeito garantido é commitar os 3 mp3 em `assets/music/`.
+
+Música dos Reels, jeito garantido: coloque `happy.mp3`, `lofi.mp3` e `corporate.mp3` em `assets/music/` e faça commit (mp3 não é ignorado).
+O gerador escolhe pelo título (receita/marmita/fit/comida = happy; finanças/dinheiro/produtividade/renda/investimento = corporate; resto = lofi, ou a
+categoria do produto) e mixa a 0,15. O resumo da execução diz, por vídeo, "Música usada: happy.mp3 (0.15)" ou "Sem música: arquivo ausente/corrompido".

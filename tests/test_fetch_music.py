@@ -91,6 +91,22 @@ class Baixar(unittest.TestCase):
             os.environ.pop("PIXABAY_API_KEY")
 
 
+class SemApi(unittest.TestCase):
+    def test_404_avisa_que_nao_ha_api_e_nao_toca_no_mp3_existente(self):
+        with tempfile.TemporaryDirectory() as d:
+            fm.PASTA = d
+            bom = os.path.join(d, "lofi.mp3")
+            with open(bom, "wb") as f:
+                f.write(MP3)
+            msgs = [fm.baixar(n, "q", CHAVE, Http(Resp(status=404))) for n in ("happy", "lofi")]
+            self.assertIn("Pixabay Music sem API - usando mp3 manuais de assets/music/", msgs[0])
+            self.assertIn("mantido", msgs[1])
+            self.assertEqual(open(bom, "rb").read(), MP3)
+            self.assertIn("sem API", fm.baixar("happy", "q", CHAVE, Http(Resp(json=None))))
+            os.environ.pop("PIXABAY_API_KEY", None)
+            self.assertEqual(fm.main(Http()), 0)
+
+
 class EscolherMusica(unittest.TestCase):
     def test_regras(self):
         e = gr.escolher_musica
@@ -102,7 +118,29 @@ class EscolherMusica(unittest.TestCase):
         self.assertEqual(e("Guia de Produtividade"), "corporate")
         self.assertEqual(e("Pare de ser interrompido e recupere seu foco"), "lofi")
         self.assertEqual(e("Hábitos de estudo"), "lofi")
+        self.assertEqual(e("Como começar a investir: investimento simples"), "corporate")
+        self.assertEqual(e("Renda extra com organização"), "corporate")
         self.assertEqual(e("Benefícios do sono"), "lofi")   # 'fit' dentro de outra palavra não conta
+
+    def test_sem_palavra_chave_usa_a_categoria(self):
+        self.assertEqual(gr.escolher_musica("Guia X", "financas"), "corporate")
+        self.assertEqual(gr.escolher_musica("Guia X", "receitas"), "happy")
+        self.assertEqual(gr.escolher_musica("Guia X", "estudos"), "lofi")
+        self.assertEqual(gr.escolher_musica("Guia X"), "lofi")
+
+    def test_diagnostico_ausente_vazio_texto_e_valido(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = {"nome": "Marmita Fit", "status": "pronto"}
+            arq = os.path.join(d, "happy.mp3")
+            self.assertIn("ausente", gr.diagnostico_musica(p, d)[1])
+            open(arq, "wb").close()
+            self.assertIn("corrompido", gr.diagnostico_musica(p, d)[1])
+            with open(arq, "wb") as f:
+                f.write(b"isto nao e um mp3" * 200)   # grande, mas sem cabeçalho de mp3
+            self.assertIn("corrompido", gr.diagnostico_musica(p, d)[1])
+            with open(arq, "wb") as f:
+                f.write(b"\xff\xfb" + b"\0" * 3000)  # quadro MPEG
+            self.assertEqual(gr.diagnostico_musica(p, d), (arq, ""))
 
     def test_mp3_vazio_ou_corrompido_vira_sem_audio(self):
         with tempfile.TemporaryDirectory() as d:
@@ -111,7 +149,7 @@ class EscolherMusica(unittest.TestCase):
             open(os.path.join(d, "happy.mp3"), "wb").close()
             self.assertIsNone(gr.musica_de(p, d))
             with open(os.path.join(d, "happy.mp3"), "wb") as f:
-                f.write(b"x" * 5000)
+                f.write(b"ID3" + b"x" * 5000)
             self.assertEqual(os.path.basename(gr.musica_de(p, d)), "happy.mp3")
 
 

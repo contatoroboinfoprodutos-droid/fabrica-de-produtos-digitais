@@ -34,7 +34,7 @@ jobs:
       - name: Baixa musicas (opcional; sem chave ou sem resultado, segue sem musica)
         run: |
           pip install requests pillow numpy
-          python scripts/fetch_music.py || echo "sem música"
+          python scripts/fetch_music.py || echo "usando mp3 manual de assets/music/"
 
       - name: Musicas encontradas
         run: |
