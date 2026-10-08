@@ -1,0 +1,58 @@
+name: Gerar Reels (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      max:
+        description: "Quantos produtos (os mais novos primeiro). 0 = todos"
+        default: "10"
+      only:
+        description: "Opcional: so um produto (slug, ex.: guia-pratico-de-produtividade-e-organizacao-da-rotina)"
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  reels:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      REELS_MAX: ${{ github.event.inputs.max }}
+      REELS_ONLY: ${{ github.event.inputs.only }}
+      REELS_LINK: ${{ vars.REELS_LINK }}   # opcional; padrao bit.ly/4rWbLt5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Instala ffmpeg e fonte
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg fonts-dejavu-core
+      - run: pip install pillow numpy
+
+      - name: Musicas encontradas
+        run: |
+          {
+            echo "### Musicas em assets/music"
+            ls -1 assets/music/*.mp3 2>/dev/null | sed 's/^/- /' || true
+            [ -n "$(ls assets/music/*.mp3 2>/dev/null)" ] || echo "- nenhuma: os videos saem SEM audio (coloque happy.mp3, lofi.mp3 e corporate.mp3)"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Gera os Reels
+        run: |
+          ARGS="--max ${REELS_MAX:-10}"
+          if [ -n "$REELS_ONLY" ]; then ARGS="$ARGS --only $REELS_ONLY"; fi
+          python scripts/generate_reels.py $ARGS | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Reels e legendas (baixe na pagina da execucao)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reels
+          path: |
+            reels/*.mp4
+            reels/legendas.txt
+          if-no-files-found: warn
+          retention-days: 14
