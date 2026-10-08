@@ -144,10 +144,40 @@ def legenda_de(p: dict) -> str:
     return "\n".join(l for l in linhas if l)
 
 
+def escolher_musica(titulo: str, categoria: str | None = None) -> str:
+    """happy (comida), corporate (dinheiro/produtividade) ou lofi (resto), pelo título; sem palavra-chave usa a categoria."""
+    t = sem_acentos(titulo).lower()
+    if re.search(r"marmit|receit|\bfit\b|comida", t):
+        return "happy"
+    if re.search(r"finan|dinheiro|produtiv|\brenda\b|investiment", t):
+        return "corporate"
+    return MUSICA_POR_CATEGORIA.get(categoria or "", "lofi")
+
+
+def mp3_valido(arq: str) -> bool:
+    """Mais de 1 KB e cabeçalho de mp3 (ID3 ou quadro MPEG). Barra arquivo vazio, cortado ou que seja outra coisa."""
+    try:
+        if os.path.getsize(arq) <= 1000:
+            return False
+        with open(arq, "rb") as f:
+            c = f.read(3)
+        return c == b"ID3" or (c[0] == 0xFF and (c[1] & 0xE0) == 0xE0)
+    except (OSError, IndexError):
+        return False
+
+
+def diagnostico_musica(p: dict, pasta: str | None = None) -> tuple[str | None, str]:
+    """(caminho do mp3, motivo). Caminho None = vídeo sem áudio; o motivo diz por quê."""
+    arq = os.path.join(pasta or PASTA_MUSICA, escolher_musica(titulo_de(p), categoria_de(p)) + ".mp3")
+    if not os.path.isfile(arq):
+        return None, f"arquivo ausente ({os.path.basename(arq)})"
+    if not mp3_valido(arq):
+        return None, f"arquivo corrompido ({os.path.basename(arq)})"
+    return arq, ""
+
+
 def musica_de(p: dict, pasta: str | None = None) -> str | None:
-    """Caminho do mp3 da categoria, ou None se não existir (o vídeo sai sem áudio)."""
-    arq = os.path.join(pasta or PASTA_MUSICA, MUSICA_POR_CATEGORIA.get(categoria_de(p), "lofi") + ".mp3")
-    return arq if os.path.isfile(arq) and os.path.getsize(arq) > 1000 else None
+    return diagnostico_musica(p, pasta)[0]
 
 
 # ----------------------------------------------------------------------------
@@ -331,6 +361,7 @@ def _ffmpeg(saida: str, quadros, duracao: float, musica: str | None) -> subproce
         except OSError:
             pass
     erro = proc.stderr.read().decode("utf-8", "replace")
+    proc.stderr.close()
     proc.wait()
     return subprocess.CompletedProcess(cmd, proc.returncode, "", erro)
 
@@ -341,15 +372,15 @@ def gerar_video(p: dict, saida: str, duracao: float | None = None, pasta_musica:
     if not shutil.which("ffmpeg"):
         raise RuntimeError("ffmpeg não encontrado")
     os.makedirs(os.path.dirname(saida) or ".", exist_ok=True)
-    musica = musica_de(p, pasta_musica)
+    musica, motivo = diagnostico_musica(p, pasta_musica)
     r = _ffmpeg(saida, montar_quadros(p, duracao), duracao, musica)
     if r.returncode != 0 and musica:
-        print(f"  aviso: música {musica} falhou ({r.stderr.strip()[:120]}); gerando sem áudio")
+        motivo = f"ffmpeg não conseguiu usar {os.path.basename(musica)}"
         musica = None
         r = _ffmpeg(saida, montar_quadros(p, duracao), duracao, None)
     if r.returncode != 0:
         raise RuntimeError(f"ffmpeg falhou: {r.stderr.strip()[:300]}")
-    return {"arquivo": saida, "musica": musica}
+    return {"arquivo": saida, "musica": musica, "motivo": motivo}
 
 
 def main(argv=None) -> int:
@@ -372,7 +403,9 @@ def main(argv=None) -> int:
         print(f"→ {titulo_de(p)}  [{categoria_de(p)}]  {preco_de(p)}")
         try:
             r = gerar_video(p, destino)
-            print(f"  ok: {destino} ({'com música ' + os.path.basename(r['musica']) if r['musica'] else 'sem áudio'})")
+            print(f"  ok: {destino}")
+            print(f"  Música usada: {os.path.basename(r['musica'])} ({VOLUME})" if r["musica"]
+                  else f"  Sem música: {r['motivo']}")
             legendas.append(f"=== {nome}.mp4 ===\n{legenda_de(p)}\n")
         except Exception as e:  # um produto com erro não derruba os outros
             falhas += 1

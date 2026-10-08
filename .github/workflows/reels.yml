@@ -20,6 +20,7 @@ jobs:
     env:
       REELS_MAX: ${{ github.event.inputs.max }}
       REELS_ONLY: ${{ github.event.inputs.only }}
+      PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
       REELS_LINK: ${{ vars.REELS_LINK }}   # opcional; padrao bit.ly/4rWbLt5
     steps:
       - uses: actions/checkout@v4
@@ -30,7 +31,10 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq ffmpeg fonts-dejavu-core
-      - run: pip install pillow numpy
+      - name: Baixa musicas (opcional; sem chave ou sem resultado, segue sem musica)
+        run: |
+          pip install requests pillow numpy
+          python scripts/fetch_music.py || echo "usando mp3 manual de assets/music/"
 
       - name: Musicas encontradas
         run: |
