@@ -18,3 +18,11 @@ yamls.txt
 projeto_completo.txt
 *.bak
 output_lowticket/
+
+# Proteção de chaves - adicionado agora
+.env
+*.env
+*_credentials.json
+*_key.json
+config.py
+crew.py
