@@ -5,6 +5,8 @@
   python -m fabrica_produtos definir-link --id ID --link URL [--plataforma cakto]
   python -m fabrica_produtos sondar                relatório (somente leitura) do que as APIs aceitam
   python -m fabrica_produtos status                lista o catálogo
+  python -m fabrica_produtos hub                   gera docs/link-na-bio.html a partir do catálogo
+  python -m fabrica_produtos reels                 gera o roteiro de Reels dos produtos que ainda não têm
 """
 import argparse
 import logging
@@ -112,11 +114,29 @@ def cmd_guardiao(args) -> int:
     return 0
 
 
+def cmd_hub() -> int:
+    from . import link_hub
+
+    r = link_hub.atualizar()
+    _saida(f"### Link na bio\n- {r['arquivo']}: {r['produtos']} produto(s) do catálogo; "
+           + ("página atualizada" if r["mudou"] else "sem mudanças"))
+    return 0
+
+
+def cmd_reels() -> int:
+    from . import reels
+
+    r = reels.atualizar()
+    linhas = [f"- roteiro criado: {i}" for i in r["novos"]] + [f"- FALHOU (tenta de novo na próxima): {f}" for f in r["falhas"]]
+    _saida("### Roteiros de Reels\n" + ("\n".join(linhas) or "- nenhum produto novo sem roteiro") + f"\n- total: {r['total']}")
+    return 0
+
+
 def main(argv=None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     ap = argparse.ArgumentParser(prog="fabrica_produtos")
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for nome in ("criar", "verificar", "sondar", "status", "marcas"):
+    for nome in ("criar", "verificar", "sondar", "status", "marcas", "hub", "reels"):
         sub.add_parser(nome)
     g = sub.add_parser("guardiao")
     for flag in ("--workflow", "--run-url", "--log", "--saida-titulo", "--saida-corpo"):
@@ -126,7 +146,7 @@ def main(argv=None) -> int:
     d.add_argument("--link", required=True)
     d.add_argument("--plataforma", default="")
     args = ap.parse_args(argv)
-    return {"criar": cmd_criar, "verificar": cmd_verificar, "sondar": cmd_sondar, "status": cmd_status, "marcas": cmd_marcas, "guardiao": lambda: cmd_guardiao(args),
+    return {"criar": cmd_criar, "verificar": cmd_verificar, "sondar": cmd_sondar, "status": cmd_status, "marcas": cmd_marcas, "hub": cmd_hub, "reels": cmd_reels, "guardiao": lambda: cmd_guardiao(args),
             "definir-link": lambda: cmd_definir_link(args)}[args.cmd]()
 
 
