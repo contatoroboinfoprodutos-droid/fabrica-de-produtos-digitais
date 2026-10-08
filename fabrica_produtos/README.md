@@ -174,3 +174,7 @@ para os produtos `pronto` com link da Cakto. Pillow desenha os quadros (fundo #1
 últimos 2 s, zoom leve, fade in) e o ffmpeg grava o vídeo. Música opcional em `assets/music/{happy,lofi,corporate}.mp3` (volume 0,15);
 sem o arquivo o vídeo sai sem áudio. Rodar no GitHub: Actions > Gerar Reels (manual) > baixar o artifact `reels`.
 Os mp4 não são commitados (ficam só no artifact, 14 dias). Link do CTA: `REELS_LINK` (Variable) ou padrão `bit.ly/4rWbLt5`.
+
+`scripts/fetch_music.py` tenta baixar `happy/lofi/corporate.mp3` com a chave `PIXABAY_API_KEY` (Secret). Nunca quebra o fluxo e não sobrescreve
+um mp3 válido já existente em `assets/music/`. A documentação pública da Pixabay só lista APIs de imagens e vídeos; se o endpoint de música
+não existir, o script avisa e pula. O jeito garantido é commitar os 3 mp3 em `assets/music/`.

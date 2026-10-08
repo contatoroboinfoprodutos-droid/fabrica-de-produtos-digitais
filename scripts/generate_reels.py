@@ -144,9 +144,19 @@ def legenda_de(p: dict) -> str:
     return "\n".join(l for l in linhas if l)
 
 
+def escolher_musica(titulo: str, categoria: str | None = None) -> str:
+    """happy (comida), corporate (dinheiro/produtividade) ou lofi (resto), pelo título; sem palavra-chave usa a categoria."""
+    t = sem_acentos(titulo).lower()
+    if re.search(r"marmit|receit|\bfit\b|comida", t):
+        return "happy"
+    if re.search(r"finan|dinheiro|produtiv", t):
+        return "corporate"
+    return MUSICA_POR_CATEGORIA.get(categoria or "", "lofi")
+
+
 def musica_de(p: dict, pasta: str | None = None) -> str | None:
-    """Caminho do mp3 da categoria, ou None se não existir (o vídeo sai sem áudio)."""
-    arq = os.path.join(pasta or PASTA_MUSICA, MUSICA_POR_CATEGORIA.get(categoria_de(p), "lofi") + ".mp3")
+    """Caminho do mp3 escolhido, ou None se não existir/estiver vazio (o vídeo sai sem áudio)."""
+    arq = os.path.join(pasta or PASTA_MUSICA, escolher_musica(titulo_de(p), categoria_de(p)) + ".mp3")
     return arq if os.path.isfile(arq) and os.path.getsize(arq) > 1000 else None
 
 
@@ -331,6 +341,7 @@ def _ffmpeg(saida: str, quadros, duracao: float, musica: str | None) -> subproce
         except OSError:
             pass
     erro = proc.stderr.read().decode("utf-8", "replace")
+    proc.stderr.close()
     proc.wait()
     return subprocess.CompletedProcess(cmd, proc.returncode, "", erro)
 
