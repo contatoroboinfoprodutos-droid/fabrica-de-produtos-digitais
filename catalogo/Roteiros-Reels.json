@@ -1,0 +1,20 @@
+[
+  {
+    "id_produto": "produtividade-foco-gjfmbn3",
+    "link_compra": "https://pay.cakto.com.br/gjfmbn3",
+    "gancho_3s": "Interrompido a cada 5 minutos?",
+    "roteiro_15s": "[0-3s] (close no rosto, texto na tela: INTERROMPIDO A CADA 5 MIN?) Você perde o foco toda hora? [3-10s] (mostra tela bagunçada / celular vibrando / corta para PDF aberto) Esse guia mapeia sua rotina e cria blocos de foco em 15 minutos. [10-15s] (aponta para baixo) Tá por R$8,90 em PDF. Link na bio - todos os guias lá",
+    "legenda": "Se você começa 10 coisas e não termina nenhuma, não é falta de disciplina. É falta de método. Esse guia é de 15 min e já te dá o bloco de foco de amanhã. R$8,90 👇 Todos os guias no link da bio.",
+    "cta": "Link na bio - todos os guias lá",
+    "preco": "R$ 8,90"
+  },
+  {
+    "id_produto": "receitas-fit-marmitas-v93eacj",
+    "link_compra": "https://pay.cakto.com.br/v93eacj",
+    "gancho_3s": "Marmita sem graça de novo?",
+    "roteiro_15s": "[0-3s] (abre marmita sem graça, cara de desânimo) De novo frango com batata sem graça? [3-10s] (mostra 3 marmitas coloridas rápidas) Nesse guia você monta marmitas variadas e seu cardápio da semana em minutos, sem aumentar calorias. [10-15s] (mostra PDF no celular) R$8,90 em PDF imediato. Link na bio - todos os guias lá",
+    "legenda": "Parar de pedir delivery não precisa ser sofrido. Montei 1 guia para você montar marmitas que você tem vontade de comer. Prático, barato e fit. R$8,90. Todos os guias no link da bio",
+    "cta": "Link na bio - todos os guias lá",
+    "preco": "R$ 8,90"
+  }
+]
