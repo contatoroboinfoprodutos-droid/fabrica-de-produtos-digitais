@@ -24,5 +24,3 @@ output_lowticket/
 *.env
 *_credentials.json
 *_key.json
-config.py
-crew.py
