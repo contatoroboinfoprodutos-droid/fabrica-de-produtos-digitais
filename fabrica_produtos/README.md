@@ -166,3 +166,11 @@ Os dois leem só o catálogo real (`catalogo/catalogo.json`): nada de público, 
 - `link_hub.validar_catalogo()` confere: link da Cakto (`https://pay.cakto.com.br/...`), `preco_texto` no formato `R$ 8,90` e igual a `preco`,
   e `nome` com menos de 60 caracteres. O comando `hub` mostra os avisos no resumo da execução (não bloqueia). Produto novo com nome de 60+ é barrado na criação.
 - `index.html` mostra só produtos `pronto` com link da Cakto e escapa o texto vindo do catálogo.
+
+## Reels em vídeo (manual, orgânico)
+
+`python scripts/generate_reels.py [--max 10] [--only slug]` gera `reels/<slug>.mp4` (1080x1920, 8 s, 30 fps) e `reels/legendas.txt`
+para os produtos `pronto` com link da Cakto. Pillow desenha os quadros (fundo #121212, logo FPD ⚡, título, selo de preço, CTA nos
+últimos 2 s, zoom leve, fade in) e o ffmpeg grava o vídeo. Música opcional em `assets/music/{happy,lofi,corporate}.mp3` (volume 0,15);
+sem o arquivo o vídeo sai sem áudio. Rodar no GitHub: Actions > Gerar Reels (manual) > baixar o artifact `reels`.
+Os mp4 não são commitados (ficam só no artifact, 14 dias). Link do CTA: `REELS_LINK` (Variable) ou padrão `bit.ly/4rWbLt5`.

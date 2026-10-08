@@ -24,3 +24,6 @@ output_lowticket/
 *.env
 *_credentials.json
 *_key.json
+
+# Reels gerados (baixe pelo artifact do workflow)
+reels/*.mp4
