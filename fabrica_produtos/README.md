@@ -156,3 +156,13 @@ Os dois leem só o catálogo real (`catalogo/catalogo.json`): nada de público, 
 - **GitHub Pages**: Settings > Pages > Source "Deploy from a branch", branch `main`, pasta `/docs`.
   URL: https://contatoroboinfoprodutos-droid.github.io/robo-infoprodutos/link-na-bio.html
   (repositório privado só publica Pages em plano pago; no plano grátis o repositório precisa ser público.)
+
+## Preços por nível e validação do catálogo
+
+- A fábrica escolhe o nível de cada produto em rodízio de 6 (guia, guia, pacote, guia, pacote, combo) e **o preço é fixo em código**:
+  guia R$ 8,90 · pacote R$ 19,90 · combo premium R$ 27,90. A IA não decide preço nem tipo. O prompt pede o volume do nível e
+  `travas.palavras_minimas` barra produto curto (600 / 1400 / 2200 palavras). O mesmo preço vai para a Cakto, para o catálogo e para a página.
+- `FABRICA_TIPOS=guia` (Variable ou Secret) volta tudo para R$ 8,90. `FABRICA_PRECO_MIN/MAX` ainda limitam a faixa.
+- `link_hub.validar_catalogo()` confere: link da Cakto (`https://pay.cakto.com.br/...`), `preco_texto` no formato `R$ 8,90` e igual a `preco`,
+  e `nome` com menos de 60 caracteres. O comando `hub` mostra os avisos no resumo da execução (não bloqueia). Produto novo com nome de 60+ é barrado na criação.
+- `index.html` mostra só produtos `pronto` com link da Cakto e escapa o texto vindo do catálogo.

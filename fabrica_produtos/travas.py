@@ -110,8 +110,8 @@ def verificar_produto(p: dict) -> list[str]:
     nome = str(p.get("nome") or "").strip()
     if not nome:
         problemas.append("nome vazio")
-    elif len(nome) > 80:
-        problemas.append("nome com mais de 80 caracteres")
+    elif len(nome) >= 60:
+        problemas.append("nome com 60 caracteres ou mais (precisa caber no card da página)")
 
     preco = parse_preco(p.get("preco"))
     if preco is None:

@@ -36,8 +36,9 @@ def cmd_criar() -> int:
     from . import fabrica, registrador  # import tardio: só aqui o CrewAI é necessário
 
     tema = fabrica.tema_da_rodada(os.getenv("PRODUTO_TOPICO", ""))
-    _saida(f"Tema da rodada: {tema}  |  simulação (FABRICA_DRY_RUN): {cfg.DRY_RUN}")
-    res = fabrica.criar_e_guardar(tema)
+    tipo = fabrica.tipo_da_rodada()
+    _saida(f"Tema da rodada: {tema}  |  nível: {cfg.ROTULOS[tipo]} ({cfg.TIPOS[tipo]:.2f})  |  simulação (FABRICA_DRY_RUN): {cfg.DRY_RUN}")
+    res = fabrica.criar_e_guardar(tema, tipo=tipo)
     texto = fabrica.resumo_markdown(res)
     if res["status"] == "aprovado":
         linhas = registrador.registrar_produto(res["registro"]["id"])
@@ -118,8 +119,10 @@ def cmd_hub() -> int:
     from . import link_hub
 
     r = link_hub.atualizar()
+    avisos = link_hub.validar_catalogo()
     _saida(f"### Link na bio\n- {r['arquivo']}: {r['produtos']} produto(s) do catálogo; "
-           + ("página atualizada" if r["mudou"] else "sem mudanças"))
+           + ("página atualizada" if r["mudou"] else "sem mudanças")
+           + "\n" + ("\n".join(f"- ATENÇÃO {a}" for a in avisos) if avisos else "- catálogo válido (Cakto, preço e nome)"))
     return 0
 
 

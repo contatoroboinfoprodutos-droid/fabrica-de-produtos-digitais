@@ -10,7 +10,7 @@ from fabrica_produtos import __main__ as cli, link_hub, reels  # noqa: E402
 
 
 def prod(i, nome, status="pronto", link="https://pay.cakto.com.br/abc", promessa="Organize sua rotina."):
-    return {"id": i, "nome": nome, "status": status, "link_compra": link, "preco_texto": "R$ 8,90",
+    return {"id": i, "nome": nome, "status": status, "link_compra": link, "preco_texto": "R$ 8,90", "preco": 8.9,
             "promessa": promessa, "conteudos": ["Blocos de foco"]}
 
 
@@ -62,10 +62,48 @@ class Hub(Base):
 
     def test_cli(self):
         os.environ["FABRICA_CATALOGO"] = self.cat
+        antigo = link_hub.SAIDA_PADRAO
+        link_hub.SAIDA_PADRAO = self.html  # nunca grava no docs/ real
         try:
             self.assertEqual(cli.main(["hub"]), 0)
         finally:
             os.environ.pop("FABRICA_CATALOGO")
+            link_hub.SAIDA_PADRAO = antigo
+
+
+class Validacao(Base):
+    def prob(self, ps):
+        self.grava(ps)
+        return link_hub.validar_catalogo(self.cat)
+
+    def test_catalogo_certo_passa(self):
+        self.assertEqual(link_hub.validar_catalogo(self.cat), [])
+
+    def test_link_precisa_ser_cakto(self):
+        for ruim in ("https://pay.kiwify.com.br/x", "http://pay.cakto.com.br/x", "https://pay.cakto.com.br.evil.com/x",
+                     "https://pay.cakto.com.br/"):
+            self.assertTrue(any("Cakto" in x for x in self.prob([prod("a", "A", link=ruim)])), ruim)
+        self.assertTrue(any("sem link" in x for x in self.prob([prod("a", "A", link="")])))
+        self.assertEqual(self.prob([prod("a", "A", status="aguardando_cadastro", link="")]), [])
+
+    def test_preco_texto_formato_e_igual_ao_preco(self):
+        def com(texto, preco=19.9):
+            p = prod("a", "A"); p.update(preco_texto=texto, preco=preco); return self.prob([p])
+        self.assertEqual(com("R$ 19,90"), [])
+        for ruim in ("19,90", "R$19,90", "R$ 19.90", "R$ 19,9", ""):
+            self.assertTrue(any("preco_texto" in x for x in com(ruim)), ruim)
+        self.assertTrue(any("diferente" in x for x in com("R$ 27,90")))
+
+    def test_nome_menor_que_60(self):
+        self.assertEqual(self.prob([prod("a", "x" * 59)]), [])
+        self.assertTrue(any("nome" in x for x in self.prob([prod("a", "x" * 60)])))
+
+    def test_reprovado_nao_conta(self):
+        self.assertEqual(self.prob([prod("a", "x" * 99, status="reprovado", link="https://x.com")]), [])
+
+    def test_hub_ignora_link_que_nao_e_cakto(self):
+        self.grava([prod("a", "A", link="https://outro.com/x"), prod("b", "B")])
+        self.assertEqual([p["id"] for p in link_hub.produtos_do_hub(self.cat)], ["b"])
 
 
 BOM = json.dumps({"gancho_3s": "Você é interrompido a cada 5 minutos?",
@@ -84,7 +122,7 @@ class Reels(Base):
         self.assertEqual(rs[0]["cta"], "Link na bio - todos os guias lá")
         self.assertTrue(rs[0]["roteiro_15s"].startswith("[0-3s] Você é interrompido"))
         self.assertIn("[3-10s]", rs[0]["roteiro_15s"])
-        self.assertTrue(rs[0]["roteiro_15s"].endswith("[10-15s] Guia em PDF por R$ 8,90. Link na bio - todos os guias lá"))
+        self.assertTrue(rs[0]["roteiro_15s"].endswith("[10-15s] Em PDF por R$ 8,90. Link na bio - todos os guias lá"))
         # sétimo produto: só o novo é gerado; os antigos não são reescritos
         self.grava([prod("a", "Guia A"), prod("b", "Guia B"), prod("c", "Guia C")])
         chamadas.clear()
