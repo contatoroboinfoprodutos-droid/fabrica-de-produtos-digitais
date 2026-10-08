@@ -140,3 +140,19 @@ posts usam `LT_BRAND_HANDLE` no rodapé (ex.: `@seuperfil`); sem ele, usam o nom
 
 A troca das fotos e os textos do perfil são **manuais**: o Instagram não oferece isso pela API e nenhum robô
 daqui altera bio, descrição ou botão das páginas.
+
+## Link na bio e roteiros de Reels (agente_link_hub e agente_roteiro_reels)
+
+Os dois leem só o catálogo real (`catalogo/catalogo.json`): nada de público, segmentação, produto ou link inventado.
+
+- **Hub** (`python -m fabrica_produtos hub`, sem IA): gera `docs/link-na-bio.html` com um card por produto `pronto` que tenha link de compra
+  (título, promessa do catálogo, preço e botão "Comprar agora" para o `link_compra` real). Produto sem link não aparece.
+- **Reels** (`python -m fabrica_produtos reels`, usa o CrewAI): para cada produto `pronto` sem roteiro, grava em
+  `catalogo/roteiros_reels.json` `{id_produto, gancho_3s, roteiro_15s, legenda, cta}`. O modelo só escreve gancho, dor/solução e legenda;
+  CTA fixo ("Link na bio - todos os guias lá") e preço vêm do código. Termos proibidos, links, @ e preço escrito pelo modelo reprovam o roteiro.
+  Roteiro existente nunca é reescrito; falha numa rodada é tentada de novo na próxima.
+- Rodam em `produto.yml` depois de `criar`/`verificar` (06:00 e a cada 6 h) e fazem commit de `catalogo` e `docs`.
+  Manualmente: Actions > Fabrica de Produtos > Run workflow > acao `reels` ou `hub`.
+- **GitHub Pages**: Settings > Pages > Source "Deploy from a branch", branch `main`, pasta `/docs`.
+  URL: https://contatoroboinfoprodutos-droid.github.io/robo-infoprodutos/link-na-bio.html
+  (repositório privado só publica Pages em plano pago; no plano grátis o repositório precisa ser público.)
