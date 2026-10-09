@@ -144,6 +144,8 @@ def curar(modelo_atual: str, api_key: str, sessao=requests) -> str | None:
 def resolver_modelo(modelo_atual: str, api_key: str, sessao=requests) -> str | None:
     """Devolve o modelo a usar: o atual, se responde; um gratuito novo, se o atual saiu do ar; None se nada serve.
     Falha de rede ou limite de uso (429) não é motivo para trocar: mantém o atual."""
+    if not (modelo_atual or "").strip():  # Variable apagada: o Actions entrega "" (não "ausente"); vai direto a um gratuito
+        return get_free_model(api_key, sessao=sessao)
     try:
         r = sessao.post(CHAT_URL, timeout=45,
                         headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},

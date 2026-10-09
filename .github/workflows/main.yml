@@ -71,6 +71,8 @@ jobs:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
           GH_PAT_VARIABLES: ${{ secrets.GH_PAT_VARIABLES }}  # opcional: deixa o healer atualizar a Variable
+          FABRICA_HASHTAGS_INSTAGRAM: ${{ vars.FABRICA_HASHTAGS_INSTAGRAM || secrets.FABRICA_HASHTAGS_INSTAGRAM || '20' }}
+          FABRICA_HASHTAGS_FACEBOOK: ${{ vars.FABRICA_HASHTAGS_FACEBOOK || secrets.FABRICA_HASHTAGS_FACEBOOK || '20' }}
           MODEL: ${{ secrets.MODEL }}
           PRODUTO_TOPICO: ${{ secrets.PRODUTO_TOPICO }}
           IMAGEM_PADRAO_URL: ${{ secrets.IMAGEM_PADRAO_URL }}

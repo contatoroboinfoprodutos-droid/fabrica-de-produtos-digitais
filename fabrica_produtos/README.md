@@ -172,7 +172,7 @@ Os dois leem só o catálogo real (`catalogo/catalogo.json`): nada de público, 
 `python scripts/generate_reels.py [--max 10] [--only slug]` gera `reels/<slug>.mp4` (1080x1920, 8 s, 30 fps) e `reels/legendas.txt`
 para os produtos `pronto` com link da Cakto. Pillow desenha os quadros (fundo #121212, logo FPD ⚡, título, selo de preço, CTA nos
 últimos 2 s, zoom leve, fade in) e o ffmpeg grava o vídeo. Música opcional em `assets/music/{happy,lofi,corporate}.mp3` (volume 0,15);
-sem o arquivo o vídeo sai sem áudio. Rodar no GitHub: Actions > Gerar Reels (manual) > baixar o artifact `reels`.
+sem o arquivo o vídeo sai sem áudio. Rodar no GitHub: Actions > Reels (publicacao diaria) (ver a seção "Reels diários" abaixo).
 Os mp4 não são commitados (ficam só no artifact, 14 dias). Link do CTA: `REELS_LINK` (Variable) ou padrão `bit.ly/4rWbLt5`.
 
 `scripts/fetch_music.py` tenta baixar `happy/lofi/corporate.mp3` com a chave `PIXABAY_API_KEY` (Secret). Nunca quebra o fluxo e não sobrescreve
@@ -220,3 +220,18 @@ Reels: se o mp3 da categoria falta ou está corrompido, o gerador usa outro mp3 
 - **Retry por rede**: Facebook e Instagram repetem até 3x (4 s, 8 s) em erro 5xx/429/rede; só a rede que falhou é repetida.
 - **Rodízio de produtos**: o nicho de cada rodada pula os que apareceram nos últimos 5 produtos; novos nichos
   (finanças domésticas, organização da casa, renda extra com habilidades e serviços online).
+
+## Reels diários (PR #17)
+
+`reels.yml` roda todo dia às 18:00 UTC (15:00 Brasília) e também manualmente (`dry_run=true` por padrão no manual).
+`python -m fabrica_produtos.reels_publicar`: escolhe o produto mais novo sem Reel (senão o menos postado, rodízio),
+gera o vídeo com a música de `assets/music`, monta a legenda de cada rede em código (CTA da rede + 5 hashtags,
+público geral), publica no Facebook (Reels da Página) e no Instagram (Reels) com retry 3x só na rede que falhou, e grava
+`catalogo/reels_publicados.json` (o workflow faz o commit). Uma segunda execução no mesmo dia completa só a rede que faltou.
+- Agendado publica de verdade; para pausar, crie a Variable `REELS_DRY_RUN=true`.
+- O Instagram baixa o vídeo pela URL que o Facebook gera; se ela não vier, o robô envia o arquivo direto (upload resumível).
+  Os campos seguem a documentação da Meta, mas só a primeira execução real confirma permissões da conta
+  (`pages_manage_posts`, `instagram_content_publish`): o erro, se houver, aparece no resumo da execução.
+- Música: são os mp3 livres de `assets/music` (ou da Pixabay, se houver chave). "Viral" não dá para garantir nem
+  licenciar por API: use só áudio com licença livre.
+- `FABRICA_HASHTAGS_INSTAGRAM/FACEBOOK` agora são repassadas pelos workflows (antes só valiam no código).
