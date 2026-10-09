@@ -14,11 +14,11 @@ from config import get_settings
 from fabrica_produtos import catalogo, marcas, travas
 
 
-def _preparar(texto: str):
+def _preparar(texto: str, rede: str | None = None):
     """Travas em código: o texto só pode afirmar o que está no catálogo. Devolve
     (produto, texto_corrigido, ajustes, problemas). Problemas = não publicar em modo real."""
     produto = catalogo.produto_ativo()
-    legenda, acoes, problemas = travas.preparar_legenda(produto, texto, "VITRINE")
+    legenda, acoes, problemas = travas.preparar_legenda(produto, texto, "VITRINE", rede)
     return produto, legenda, acoes, problemas
 
 
@@ -55,7 +55,7 @@ class PublishToFacebookTool(BaseTool):
     args_schema: Type[BaseModel] = FacebookPostInput
 
     def _run(self, message: str, link: Optional[str] = None, image_url: Optional[str] = None) -> str:
-        produto, message, acoes, problemas = _preparar(message)
+        produto, message, acoes, problemas = _preparar(message, "facebook")
         # Simulação: sai ANTES de qualquer chamada de rede à Meta.
         if get_settings().dry_run:
             return (
@@ -97,7 +97,7 @@ class PublishToInstagramTool(BaseTool):
     args_schema: Type[BaseModel] = InstagramPostInput
 
     def _run(self, image_url: str, caption: str) -> str:
-        produto, caption, acoes, problemas = _preparar(caption)
+        produto, caption, acoes, problemas = _preparar(caption, "instagram")
         # Simulação: sai ANTES de qualquer chamada de rede à Meta.
         if get_settings().dry_run:
             return (

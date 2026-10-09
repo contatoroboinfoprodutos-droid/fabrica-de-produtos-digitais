@@ -191,7 +191,7 @@ def verificar_anuncio(produto: dict | None, texto: str, tipo: str) -> list[str]:
     link = str(produto.get("link_compra") or "").strip()
     if tipo in ("OFERTA", "VITRINE") or _urls(texto):
         for u in _urls(texto):
-            if u != link:
+            if u != link and not link_de_cta(u):
                 problemas.append(f"link no texto diferente do catálogo: {u}")
     if tipo == "OFERTA":
         if not link_ok(link):
@@ -204,6 +204,70 @@ def verificar_anuncio(produto: dict | None, texto: str, tipo: str) -> list[str]:
         if preco is not None and abs((parse_preco(achado) or -1) - preco) > 0.001:
             problemas.append(f"preço no texto ({achado}) diferente do catálogo ({formatar_preco(preco)})")
     return problemas
+
+
+# ----------------------------------------------------------------------------
+# Legenda por rede: hashtags em 3 camadas (topo = amplas, meio = do tema, fundo = nicho) + CTA do canal.
+# Feito em código: o modelo não escolhe hashtag nem link, então nada sai irrelevante, proibido ou inventado.
+# ----------------------------------------------------------------------------
+HASHTAGS_CAMADAS = {
+    "receitas": (("#receitas", "#alimentacaosaudavel"), ("#marmita", "#marmitafit", "#cardapiosemanal"),
+                 ("#habitossaudaveis", "#rotinasaudavel")),
+    "financas": (("#financaspessoais", "#educacaofinanceira"), ("#orcamento", "#controlefinanceiro", "#organizacao"),
+                 ("#habitos", "#planejamento")),
+    "renda": (("#rendaextra", "#habilidades"), ("#trabalhoonline", "#freelancer", "#aprender"),
+              ("#habitos", "#organizacao")),
+    "produtividade": (("#produtividade", "#organizacao"), ("#rotina", "#foco", "#gestaodotempo"),
+                      ("#habitos", "#disciplina")),
+}
+_PALAVRAS_TEMA = [("renda", r"renda extra"), ("receitas", r"marmit|receit|cardapio|aliment"),
+                  ("financas", r"financ|orcament")]
+_RE_SO_HASHTAGS = re.compile(r"(?:\s*#\w+)+\s*")
+
+
+def tema_da_legenda(produto: dict | None, texto: str = "") -> str:
+    base = sem_acentos(" ".join(str((produto or {}).get(k) or "") for k in ("nome", "promessa")) + " " + (texto or "")).lower()
+    for tema, padrao in _PALAVRAS_TEMA:
+        if re.search(padrao, base):
+            return tema
+    return "produtividade"
+
+
+def hashtags_em_camadas(produto: dict | None, texto: str = "") -> str:
+    topo, meio, fundo = HASHTAGS_CAMADAS[tema_da_legenda(produto, texto)]
+    return " ".join(topo + meio + fundo)
+
+
+def _sem_hashtags_no_fim(texto: str) -> str:
+    linhas = (texto or "").rstrip().split("\n")
+    while linhas and (not linhas[-1].strip() or _RE_SO_HASHTAGS.fullmatch(linhas[-1])):
+        linhas.pop()
+    return "\n".join(linhas).rstrip()
+
+
+def _norm_link(u: str) -> str:
+    return re.sub(r"^https?://", "", str(u or "").strip().lower()).rstrip("/")
+
+
+def link_de_cta(u: str) -> bool:
+    """True para os links de chamada configurados (bio do Instagram e Facebook): não são 'link inventado'."""
+    return _norm_link(u) in {_norm_link(cfg.LINK_BIO_INSTAGRAM), _norm_link(cfg.LINK_FACEBOOK)}
+
+
+def cta_da_rede(rede: str) -> str:
+    if rede == "instagram":
+        return f"Link na bio: {cfg.LINK_BIO_INSTAGRAM}"
+    return f"Veja todos os guias: {cfg.LINK_FACEBOOK}"
+
+
+def finalizar_para_rede(produto: dict | None, texto: str, rede: str) -> str:
+    """Legenda final da rede ('instagram' ou 'facebook'): texto + CTA do canal + hashtags em 3 camadas.
+    Troca as hashtags que o modelo escreveu no fim do texto; não mexe no resto."""
+    t = _sem_hashtags_no_fim(texto)
+    alvo = cfg.LINK_BIO_INSTAGRAM if rede == "instagram" else cfg.LINK_FACEBOOK
+    if _norm_link(alvo) not in _norm_link(t):
+        t = f"{t}\n\n{cta_da_rede(rede)}".strip()
+    return f"{t}\n\n{hashtags_em_camadas(produto, texto)}"
 
 
 _HASHTAGS = "#infoprodutos #guiapratico #aprendizado #conteudodigital #dicaspraticas"
@@ -241,7 +305,8 @@ def card_modelo(produto: dict | None, tipo: str) -> tuple[str, str]:
     return _truncar(str(produto.get("nome")), 60), _truncar(str(produto.get("promessa")), 100)
 
 
-def preparar_legenda(produto: dict | None, texto: str, tipo: str) -> tuple[str, list[str], list[str]]:
+def preparar_legenda(produto: dict | None, texto: str, tipo: str,
+                     rede: str | None = None) -> tuple[str, list[str], list[str]]:
     """Corrige o que dá para corrigir sem inventar nada e devolve (legenda, ações, problemas_restantes).
     problemas_restantes não vazio = NÃO publicar em modo real."""
     acoes = []
@@ -263,7 +328,7 @@ def preparar_legenda(produto: dict | None, texto: str, tipo: str) -> tuple[str, 
         link = str(produto.get("link_compra") or "").strip()
         if link_ok(link):
             for u in dict.fromkeys(_urls(t)):
-                if u != link:
+                if u != link and not link_de_cta(u):
                     t = t.replace(u, link)
                     acoes.append(f"trocou o link {u} pelo link do catálogo")
         preco = parse_preco(produto.get("preco"))
@@ -276,4 +341,7 @@ def preparar_legenda(produto: dict | None, texto: str, tipo: str) -> tuple[str, 
             t = f"{t}\n\nAcesse: {link}".strip()
             acoes.append("acrescentou o link do catálogo")
 
+    if rede in ("instagram", "facebook"):
+        t = finalizar_para_rede(produto, t, rede)
+        acoes.append(f"acrescentou CTA e hashtags em 3 camadas ({rede})")
     return t, acoes, verificar_anuncio(produto, t, tipo)

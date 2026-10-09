@@ -30,7 +30,7 @@ def build_lt_tasks(slot: str):
              else "Sem link de venda; CTA para salvar/seguir.")
     lt_task_copy = Task(
         description=(f"Com o gancho escolhido, escreva:\n1) HEADLINE do card (máx 60 caracteres)\n"
-                     f"2) SUBLINE (máx 100 caracteres)\n3) LEGENDA (até 900 caracteres, com 5 hashtags)\n"
+                     f"2) SUBLINE (máx 100 caracteres)\n3) LEGENDA (até 800 caracteres, SEM hashtags e SEM link de catálogo: o sistema acrescenta hashtags em 3 camadas e o CTA de cada rede)\n"
                      "4) TEMA_IMAGEM: 2 a 4 palavras EM INGLÊS que descrevam uma foto de fundo "
                      "relacionada ao tema (ex.: 'woman studying laptop'). Evite pessoas famosas, marcas e textos.\n"
                      f"{extra}{_contexto_produto()}\nSem promessa de ganho garantido. "

@@ -1,0 +1,106 @@
+"""Legenda por rede: hashtags em 3 camadas, CTA do canal e links de CTA liberados na trava de links."""
+import importlib.util
+import os
+import tempfile
+import unittest
+
+from fabrica_produtos import config_fabrica as cfg, travas
+
+RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+spec = importlib.util.spec_from_file_location("generate_reels", os.path.join(RAIZ, "scripts", "generate_reels.py"))
+gr = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(gr)
+
+IG = "https://fabricadeprodutosdigitais.github.io/fabrica-de-produtos-digitais/"
+FB = "bit.ly/4ibGb7a"
+LINK = "https://pay.cakto.com.br/abc"
+
+
+def prod(nome="Guia Prático de Produtividade", promessa="Organize sua rotina.", **kw):
+    p = {"nome": nome, "promessa": promessa, "status": "pronto", "preco": 8.9, "preco_texto": "R$ 8,90",
+         "link_compra": LINK, "conteudos": ["Blocos de foco"]}
+    p.update(kw)
+    return p
+
+
+class Legenda(unittest.TestCase):
+    def test_links_padrao(self):
+        self.assertEqual(cfg.LINK_BIO_INSTAGRAM, IG)
+        self.assertEqual(cfg.LINK_FACEBOOK, FB)
+
+    def test_instagram_e_facebook_recebem_cta_diferente_e_3_camadas(self):
+        base = "Pare de perder tempo.\n\n#qualquer #coisa"
+        ig = travas.finalizar_para_rede(prod(), base, "instagram")
+        fb = travas.finalizar_para_rede(prod(), base, "facebook")
+        self.assertIn(f"Link na bio: {IG}", ig)
+        self.assertNotIn(FB, ig)
+        self.assertIn(f"Veja todos os guias: {FB}", fb)
+        self.assertNotIn("github.io", fb)
+        for h in ("#produtividade", "#organizacao", "#rotina", "#foco", "#gestaodotempo", "#habitos", "#disciplina"):
+            self.assertIn(h, ig)
+        self.assertNotIn("#qualquer", ig)                     # hashtags do modelo no fim são trocadas
+        self.assertTrue(ig.rstrip().splitlines()[-1].startswith("#produtividade #organizacao"))  # hashtags por último
+
+    def test_hashtags_seguem_o_tema_do_produto(self):
+        self.assertIn("#marmita", travas.hashtags_em_camadas(prod("Receitas Fit e Marmitas")))
+        self.assertNotIn("#rendaextra", travas.hashtags_em_camadas(prod("Receitas Fit e Marmitas")))
+        self.assertIn("#financaspessoais", travas.hashtags_em_camadas(prod("Finanças Pessoais do Zero")))
+        self.assertIn("#rendaextra", travas.hashtags_em_camadas(prod("Renda extra com habilidades online")))
+        self.assertIn("#produtividade", travas.hashtags_em_camadas(None, "dica do dia"))
+        todas = " ".join(" ".join(a + b + c) for a, b, c in travas.HASHTAGS_CAMADAS.values())
+        self.assertEqual(travas.encontrar_termos(todas), [])
+
+    def test_nao_duplica_cta_se_o_texto_ja_tem_o_link(self):
+        t = travas.finalizar_para_rede(prod(), f"Texto.\nLink na bio: {IG}", "instagram")
+        self.assertEqual(t.count(IG), 1)
+
+    def test_preparar_legenda_aceita_os_links_de_cta_e_ainda_barra_link_inventado(self):
+        t, acoes, problemas = travas.preparar_legenda(prod(), f"Guia por R$ 8,90 {LINK}", "VITRINE", "instagram")
+        self.assertEqual(problemas, [])
+        self.assertIn(IG, t)
+        t, _, problemas = travas.preparar_legenda(prod(), "Veja https://golpe.com/x por R$ 8,90", "VITRINE", "facebook")
+        self.assertNotIn("golpe.com", t)                    # trocado pelo link do catálogo
+        self.assertEqual(problemas, [])
+        self.assertTrue(travas.verificar_anuncio(prod(), "Veja https://golpe.com/x", "VITRINE"))
+        self.assertEqual(travas.verificar_anuncio(prod(), f"Veja {IG} e https://{FB}", "VITRINE"), [])
+
+    def test_sem_rede_nao_muda_o_comportamento_antigo(self):
+        t, acoes, _ = travas.preparar_legenda(prod(), "Texto com mais de trinta caracteres, certo? #a #b", "VITRINE")
+        self.assertNotIn("github.io", t)
+
+    def test_termo_proibido_continua_sendo_removido(self):
+        t, _, problemas = travas.preparar_legenda(prod(), "Método testado e comprovado para você. Organize seu dia hoje.",
+                                                  "VITRINE", "instagram")
+        self.assertEqual(travas.encontrar_termos(t), [])
+        self.assertEqual(problemas, [])
+
+
+class MusicaPlanoB(unittest.TestCase):
+    def mp3(self, d, nome, valido=True):
+        with open(os.path.join(d, nome + ".mp3"), "wb") as f:
+            f.write((b"ID3" if valido else b"lixo") + b"\0" * 3000)
+
+    def test_usa_outro_mp3_valido_quando_o_da_categoria_falha(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = {"nome": "Marmita Fit", "status": "pronto"}            # categoria -> happy
+            self.mp3(d, "happy", valido=False)
+            self.mp3(d, "corporate")
+            arq, motivo = gr.diagnostico_musica(p, d)
+            self.assertEqual(os.path.basename(arq), "corporate.mp3")
+            self.assertIn("happy.mp3", motivo)
+            self.assertIn("corrompido", motivo)
+            self.mp3(d, "lofi")
+            self.assertEqual(os.path.basename(gr.diagnostico_musica(p, d)[0]), "lofi.mp3")   # lofi primeiro
+            self.mp3(d, "happy")                                         # o da categoria válido: sem aviso
+            self.assertEqual(gr.diagnostico_musica(p, d), (os.path.join(d, "happy.mp3"), ""))
+
+    def test_nenhum_valido_fica_sem_audio(self):
+        with tempfile.TemporaryDirectory() as d:
+            self.mp3(d, "lofi", valido=False)
+            arq, motivo = gr.diagnostico_musica({"nome": "Marmita Fit", "status": "pronto"}, d)
+            self.assertIsNone(arq)
+            self.assertIn("ausente", motivo)
+
+
+if __name__ == "__main__":
+    unittest.main()
