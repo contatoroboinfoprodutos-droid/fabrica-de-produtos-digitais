@@ -225,16 +225,24 @@ _PALAVRAS_TEMA = [("renda", r"renda extra"), ("receitas", r"marmit|receit|cardap
 _RE_SO_HASHTAGS = re.compile(r"(?:\s*#\w+)+\s*")
 
 
-def tema_da_legenda(produto: dict | None, texto: str = "") -> str:
-    base = sem_acentos(" ".join(str((produto or {}).get(k) or "") for k in ("nome", "promessa")) + " " + (texto or "")).lower()
+def _tema_em(texto: str) -> str | None:
+    base = sem_acentos(texto or "").lower()
     for tema, padrao in _PALAVRAS_TEMA:
         if re.search(padrao, base):
             return tema
-    return "produtividade"
+    return None
 
 
-def hashtags_em_camadas(produto: dict | None, texto: str = "") -> str:
-    topo, meio, fundo = HASHTAGS_CAMADAS[tema_da_legenda(produto, texto)]
+def tema_da_legenda(produto: dict | None, texto: str = "", tipo: str | None = None) -> str:
+    """O tema vem do texto; se o texto não diz, do produto (menos em post de VALOR, que é dica geral e não vende o produto)."""
+    tema = _tema_em(texto)
+    if tema is None and produto and tipo != "VALOR":
+        tema = _tema_em(f"{produto.get('nome') or ''} {produto.get('promessa') or ''}")
+    return tema or "produtividade"
+
+
+def hashtags_em_camadas(produto: dict | None, texto: str = "", tipo: str | None = None) -> str:
+    topo, meio, fundo = HASHTAGS_CAMADAS[tema_da_legenda(produto, texto, tipo)]
     return " ".join(topo + meio + fundo)
 
 
@@ -260,14 +268,26 @@ def cta_da_rede(rede: str) -> str:
     return f"Veja todos os guias: {cfg.LINK_FACEBOOK}"
 
 
-def finalizar_para_rede(produto: dict | None, texto: str, rede: str) -> str:
+def finalizar_para_rede(produto: dict | None, texto: str, rede: str, tipo: str | None = None) -> str:
     """Legenda final da rede ('instagram' ou 'facebook'): texto + CTA do canal + hashtags em 3 camadas.
     Troca as hashtags que o modelo escreveu no fim do texto; não mexe no resto."""
     t = _sem_hashtags_no_fim(texto)
     alvo = cfg.LINK_BIO_INSTAGRAM if rede == "instagram" else cfg.LINK_FACEBOOK
     if _norm_link(alvo) not in _norm_link(t):
         t = f"{t}\n\n{cta_da_rede(rede)}".strip()
-    return f"{t}\n\n{hashtags_em_camadas(produto, texto)}"
+    return f"{t}\n\n{hashtags_em_camadas(produto, texto, tipo)}"
+
+
+# Publicação orgânica na Meta é pública por padrão. Segmentar (idade, gênero, local, interesse) exigiria parâmetros
+# explícitos que o robô NUNCA envia; o rótulo abaixo só sai se o payload realmente não tiver nenhum deles.
+CHAVES_DE_SEGMENTACAO = ("targeting", "feed_targeting", "audience", "custom_audiences", "age_min", "age_max",
+                         "geo_locations", "countries", "genders", "interests", "privacy", "audience_restrictions")
+PUBLICO_GERAL = "para todos os públicos (publicação orgânica pública, sem segmentação de idade, gênero, local ou interesse)"
+
+
+def rotulo_publico(*payloads: dict) -> str:
+    achadas = sorted({k for p in payloads for k in (p or {}) if k in CHAVES_DE_SEGMENTACAO})
+    return f"SEGMENTADO ({', '.join(achadas)})" if achadas else PUBLICO_GERAL
 
 
 _HASHTAGS = "#infoprodutos #guiapratico #aprendizado #conteudodigital #dicaspraticas"
@@ -342,6 +362,6 @@ def preparar_legenda(produto: dict | None, texto: str, tipo: str,
             acoes.append("acrescentou o link do catálogo")
 
     if rede in ("instagram", "facebook"):
-        t = finalizar_para_rede(produto, t, rede)
+        t = finalizar_para_rede(produto, t, rede, tipo)
         acoes.append(f"acrescentou CTA e hashtags em 3 camadas ({rede})")
     return t, acoes, verificar_anuncio(produto, t, tipo)

@@ -13,7 +13,9 @@ on:
         description: "Só para definir-link: link de compra copiado da plataforma"
         required: false
   schedule:
-    - cron: "0 9 * * *"     # 06:00 Brasília -> cria no máximo 1 produto por dia
+    - cron: "0 9 * * *"     # 06:00 Brasília -> cria 1 produto (respeita o teto diário FABRICA_MAX_POR_DIA)
+    - cron: "0 15 * * *"    # 12:00 Brasília -> mais uma chance (o agendador do GitHub às vezes não dispara)
+    - cron: "0 21 * * *"    # 18:00 Brasília -> idem
     - cron: "30 */6 * * *"  # a cada 6 h -> procura o link dos produtos cadastrados e libera
 
 permissions:
@@ -26,6 +28,7 @@ concurrency:
 jobs:
   fabrica:
     runs-on: ubuntu-latest
+    timeout-minutes: 40   # sem isto uma chamada de IA travada prendia o robô por 6 h (execução de 08/10)
     env:
       # --- IA (o orientador usa um provedor diferente do criador quando há mais de uma chave) ---
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -50,6 +53,7 @@ jobs:
       # --- Interruptores (podem ficar em Variables OU em Secrets; Variables vale primeiro) ---
       FABRICA_DRY_RUN: ${{ vars.FABRICA_DRY_RUN || secrets.FABRICA_DRY_RUN || 'true' }}   # true = não cria nada nas plataformas
       FABRICA_PAUSADA: ${{ vars.FABRICA_PAUSADA || secrets.FABRICA_PAUSADA || 'false' }}  # true = pausa a criação de produtos novos
+      FABRICA_MAX_POR_DIA: ${{ vars.FABRICA_MAX_POR_DIA || secrets.FABRICA_MAX_POR_DIA || '5' }}  # teto de produtos novos por dia
       PRODUTO_TOPICO: ${{ secrets.PRODUTO_TOPICO }}
       # --- entradas manuais (passam por variável de ambiente, nunca direto no script) ---
       EVENTO: ${{ github.event_name }}
@@ -69,7 +73,7 @@ jobs:
       - name: Executa a fabrica
         run: |
           if [ "$EVENTO" = "workflow_dispatch" ]; then ACAO="${ACAO_INPUT:-criar}"
-          elif [ "$CRON" = "0 9 * * *" ]; then ACAO=criar
+          elif [ "$CRON" = "0 9 * * *" ] || [ "$CRON" = "0 15 * * *" ] || [ "$CRON" = "0 21 * * *" ]; then ACAO=criar
           else ACAO=verificar; fi
           echo "Acao: $ACAO"
           if [ "$ACAO" = "definir-link" ]; then

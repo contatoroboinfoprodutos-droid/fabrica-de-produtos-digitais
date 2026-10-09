@@ -60,6 +60,7 @@ class PublishToFacebookTool(BaseTool):
         if get_settings().dry_run:
             return (
                 "[DRY_RUN] Facebook NÃO publicado (nenhuma chamada foi feita à Meta). "
+                f"Público: {travas.rotulo_publico()} "
                 f"image_url={image_url!r} message={message!r}" + _nota_travas(acoes, problemas)
             )
         if marcas.ja_publicado("facebook"):
@@ -102,6 +103,7 @@ class PublishToInstagramTool(BaseTool):
         if get_settings().dry_run:
             return (
                 "[DRY_RUN] Instagram NÃO publicado (nenhuma chamada foi feita à Meta). "
+                f"Público: {travas.rotulo_publico()} "
                 f"image_url={image_url!r} caption={caption!r}" + _nota_travas(acoes, problemas)
             )
         if marcas.ja_publicado("instagram"):

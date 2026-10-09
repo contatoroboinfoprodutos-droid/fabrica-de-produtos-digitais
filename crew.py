@@ -63,6 +63,7 @@ class GroqWithGeminiFailoverLLM(LLM):
             model=settings.gemini_model,
             api_key=settings.gemini_api_key,
             temperature=0.7,
+            timeout=240,
             max_tokens=1024,
         )
 
@@ -136,6 +137,7 @@ def get_llm() -> LLM:
             base_url="https://openrouter.ai/api/v1",
             api_key=settings.openrouter_api_key,
             temperature=0.7,
+            timeout=240,
             max_tokens=2048,
         )
 
@@ -149,6 +151,7 @@ def get_llm() -> LLM:
             base_url="https://api.groq.com/openai/v1",
             api_key=settings.groq_api_key,
             temperature=0.7,
+            timeout=240,
             max_tokens=2048,
         )
 
@@ -159,6 +162,7 @@ def get_llm() -> LLM:
             model=settings.gemini_model,
             api_key=settings.gemini_api_key,
             temperature=0.7,
+            timeout=240,
             max_tokens=2048,
         )
     return GroqWithGeminiFailoverLLM(

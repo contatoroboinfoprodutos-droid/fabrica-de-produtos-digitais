@@ -191,3 +191,13 @@ Os dois links são Variables/Secrets opcionais (`LINK_BIO_INSTAGRAM`, `LINK_FACE
 Esses dois links são liberados na trava de links; qualquer outro link inventado continua sendo trocado pelo link do catálogo.
 `#rendaextra` só entra quando o produto é de renda extra. Os agentes são instruídos a NÃO escrever hashtags nem links.
 Reels: se o mp3 da categoria falta ou está corrompido, o gerador usa outro mp3 válido de `assets/music/` e registra no log.
+
+## Por que a fábrica parou em 3 produtos (e o que mudou)
+
+- Em 08/10 o passo "Executa a fabrica" rodou 6 h e o GitHub o cancelou ("exceeded the maximum execution time of 6h0m0s"): uma chamada de IA travou, sem limite de tempo.
+  Em 07/10 o GitHub nem disparou o agendamento. Só havia 1 horário de criação por dia, então um dia perdido era um produto perdido.
+- Agora: `timeout-minutes` nos 3 workflows de robô (produto 40, lowticket 30, main 30); `FABRICA_LLM_TIMEOUT` (padrão 240 s) em toda chamada de IA;
+  `criar` roda 3 vezes por dia (09:00, 15:00 e 21:00 UTC); teto diário `FABRICA_MAX_POR_DIA` (Variable ou Secret, padrão 5). Cada execução cria 1 produto
+  e só conta o que foi criado no dia: falhou, tenta de novo no próximo horário.
+- `LT_DRY_RUN` não influi na criação de produto (só nas postagens do Low Ticket). `FABRICA_DRY_RUN`/`FABRICA_PAUSADA` sim.
+- Publicação orgânica na Meta não tem campo de público: é aberta a todos. O robô nunca envia segmentação (testado) e o dry-run mostra "Público: para todos os públicos".

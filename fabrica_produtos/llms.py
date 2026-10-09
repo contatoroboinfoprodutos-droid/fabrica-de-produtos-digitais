@@ -61,18 +61,22 @@ def candidatos(papel: str, evitar: str | None = None) -> list[dict]:
     return [{"provedor": p, "modelo": modelo_padrao(p)} for p in disp]
 
 
-def construir_llm(provedor: str, modelo: str, max_tokens: int = 6000, temperature: float = 0.7):
+def construir_llm(provedor: str, modelo: str, max_tokens: int = 6000, temperature: float = 0.7,
+                  timeout: float | None = None):
     """Cria o LLM do CrewAI (mesmo padrão usado nos outros robôs do repositório)."""
     from crewai import LLM
+    from . import config_fabrica as _cfg
+
+    timeout = timeout or _cfg.LLM_TIMEOUT
 
     if provedor == "gemini":
-        return LLM(model=modelo, api_key=_env("GEMINI_API_KEY"), temperature=temperature, max_tokens=max_tokens)
+        return LLM(model=modelo, api_key=_env("GEMINI_API_KEY"), temperature=temperature, max_tokens=max_tokens, timeout=timeout)
     if provedor == "groq":
         return LLM(model="openai/" + modelo, base_url=GROQ_BASE_URL, api_key=_env("GROQ_API_KEY"),
-                   temperature=temperature, max_tokens=max_tokens)
+                   temperature=temperature, max_tokens=max_tokens, timeout=timeout)
     if provedor == "openrouter":
         return LLM(model="openai/" + modelo, base_url=OPENROUTER_BASE_URL, api_key=_env("OPENROUTER_API_KEY"),
-                   temperature=temperature, max_tokens=max_tokens)
+                   temperature=temperature, max_tokens=max_tokens, timeout=timeout)
     raise ValueError(f"provedor desconhecido: {provedor}")
 
 

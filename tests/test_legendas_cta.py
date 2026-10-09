@@ -50,6 +50,14 @@ class Legenda(unittest.TestCase):
         todas = " ".join(" ".join(a + b + c) for a, b, c in travas.HASHTAGS_CAMADAS.values())
         self.assertEqual(travas.encontrar_termos(todas), [])
 
+    def test_post_de_valor_usa_o_tema_do_texto_e_nao_o_do_produto(self):
+        receitas = prod("Receitas Fit e Marmitas")
+        valor = travas.hashtags_em_camadas(receitas, "Escolha UMA tarefa por dia e proteja 25 minutos.", "VALOR")
+        self.assertIn("#produtividade", valor)
+        self.assertNotIn("#marmita", valor)
+        self.assertIn("#marmita", travas.hashtags_em_camadas(receitas, "Texto sem tema.", "OFERTA"))
+        self.assertIn("#marmita", travas.hashtags_em_camadas(receitas, "Hoje: marmita da semana.", "VALOR"))
+
     def test_nao_duplica_cta_se_o_texto_ja_tem_o_link(self):
         t = travas.finalizar_para_rede(prod(), f"Texto.\nLink na bio: {IG}", "instagram")
         self.assertEqual(t.count(IG), 1)

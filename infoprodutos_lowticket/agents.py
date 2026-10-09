@@ -15,12 +15,12 @@ if not _api_key:
 if cfg.LLM_PROVIDER == "openrouter":
     # OpenRouter e Groq são compatíveis com a API da OpenAI: o prefixo "openai/" + base_url funciona em qualquer versão do CrewAI.
     _llm = LLM(model="openai/" + cfg.LLM_MODEL, base_url=cfg.OPENROUTER_BASE_URL,
-               api_key=_api_key, temperature=0.7, max_tokens=2048)
+               api_key=_api_key, temperature=0.7, max_tokens=2048, timeout=240)
 elif cfg.LLM_PROVIDER == "groq":
     _llm = LLM(model="openai/" + cfg.LLM_MODEL, base_url=cfg.GROQ_BASE_URL,
-               api_key=_api_key, temperature=0.7, max_tokens=2048)
+               api_key=_api_key, temperature=0.7, max_tokens=2048, timeout=240)
 else:
-    _llm = LLM(model=cfg.LLM_MODEL, api_key=_api_key, temperature=0.7, max_tokens=2048)
+    _llm = LLM(model=cfg.LLM_MODEL, api_key=_api_key, temperature=0.7, max_tokens=2048, timeout=240)
 
 trend_scout_agent = Agent(
     role="Pesquisador de dores e ganchos de baixo custo",
