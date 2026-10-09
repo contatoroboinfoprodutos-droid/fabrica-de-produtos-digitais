@@ -144,6 +144,59 @@
           "evento": "registrado na cakto por API; link recebido"
         }
       ]
+    },
+    {
+      "nome": "Guia Prático de Inglês para o Dia a Dia",
+      "tipo": "Guia",
+      "preco": 8.9,
+      "promessa": "Aprenda frases e rotinas em inglês para usar imediatamente no seu cotidiano.",
+      "publico": "Quem quer falar inglês de forma simples em situações cotidianas, sem foco em gramática avançada.",
+      "conteudos": [
+        "Cumprimentos e apresentações",
+        "Pedindo informações e direções",
+        "Fazendo compras",
+        "No restaurante",
+        "Conversas telefônicas e mensagens"
+      ],
+      "descricao_oferta": "Um guia enxuto, dividido em cinco capítulos, que ensina, passo a passo, as expressões mais usadas no dia a dia em inglês. Cada capítulo traz instruções claras, um exemplo prático e um mini‑exercício para você praticar imediatamente. Ideal para quem quer ganhar confiança ao conversar em situações reais, como cumprimentar, pedir informações, comprar, comer fora ou falar ao telefone. Tudo em texto simples, pronto para download em PDF por apenas R$ 8,90.",
+      "capitulos": [
+        {
+          "titulo": "1. Cumprimentos e apresentações",
+          "texto": "Este capítulo foca nos cumprimentos e apresentações que você usa todos os dias. Passo 1: Aprenda as saudações básicas – “Hello”, “Hi”, “Good morning/afternoon/evening”. Passo 2: Use o verbo “to be” para se apresentar – “I am Maria”, “I’m from Brazil”. Passo 3: Pergunte o nome da outra pessoa – “What’s your name?” e responda – “My name is John”. Passo 4: Troque informações de contato – “Can I have your email?” ou “What’s your phone number?”. Passo 5: Adicione a pergunta “How are you?” e a resposta “I’m fine, thank you”. Exemplo de diálogo: A: “Hi, I’m Carlos. Nice to meet you.” B: “Hello Carlos, I’m Anna. Nice to meet you too.” Mini‑exercício: Grave um áudio de 30 segundos cumprimentando alguém, dizendo seu nome, perguntando o nome da pessoa e respondendo “How are you?”. Reproduza e verifique se usou as frases aprendidas."
+        },
+        {
+          "titulo": "2. Pedindo informações e direções",
+          "texto": "Neste capítulo você aprenderá a pedir e entender informações básicas de localização. Passo 1: Use “Excuse me” para chamar a atenção. Passo 2: Pergunte “Could you tell me how to get to…?” ou “Where is the nearest…?”. Passo 3: Aprenda respostas típicas – “Turn left/right”, “Go straight for two blocks”, “It’s next to the bank”. Passo 4: Peça confirmação – “Is that correct?” ou “Did I understand right?”. Passo 5: Anote palavras de referência como “corner”, “intersection”, “traffic light”. Exemplo: “Excuse me, could you tell me how to get to the subway station?” – “Sure, go straight for two blocks, then turn left at the traffic light; it’s next to the pharmacy.” Mini‑exercício: Escolha três lugares que você costuma visitar (ex.: supermercado, banco, posto). Escreva, em inglês, a pergunta para chegar a cada um e a resposta esperada. Leia em voz alta e pratique a pronúncia."
+        },
+        {
+          "titulo": "3. Fazendo compras",
+          "texto": "Aqui você vai dominar as frases essenciais para lojas, mercados e feiras. Passo 1: Cumprimente o atendente – “Good afternoon”. Passo 2: Pergunte o preço – “How much is this?” ou “What’s the price?”. Passo 3: Solicite quantidade – “Can I have three of these?” ou “I’d like a kilo of apples”. Passo 4: Use expressões de cortesia – “Please”, “Thank you”, “Could you help me?”. Passo 5: Aprenda a dizer que não precisa de sacola – “No, thank you”. Exemplo de troca: Cliente: “Excuse me, how much is this sweater?” Vendedor: “It’s $45.” Cliente: “I’ll take it, please.” Vendedor: “Would you like a bag?” Cliente: “No, thank you.” Mini‑exercício: Crie uma lista de cinco itens que você costuma comprar. Para cada item, escreva a frase de pergunta de preço e a frase de compra. Depois, pratique a leitura em voz alta, simulando uma conversa real."
+        },
+        {
+          "titulo": "4. No restaurante",
+          "texto": "Este capítulo ensina como se virar em cafés, lanchonetes e restaurantes. Passo 1: Cumprimente o garçom – “Hi, a table for two, please”. Passo 2: Peça o cardápio – “Could we see the menu?”. Passo 3: Faça o pedido – “I’d like the grilled chicken with salad”. Passo 4: Pergunte sobre ingredientes – “Does it contain nuts?” ou “Is it spicy?”. Passo 5: Peça a conta – “Can I have the check, please?”. Passo 6: Agradeça – “Thank you for the service”. Exemplo: Cliente: “Could I have a glass of water, please?” Garçom: “Sure, I’ll bring it right away.” Cliente: “And I’d like the pasta al pesto.” Garçom: “Would you like any cheese on top?” Cliente: “Yes, please.” Mini‑exercício: Imagine que você está em um restaurante. Escreva um pequeno diálogo de três trocas (cumprimento, pedido, pedido da conta). Leia em voz alta, marcando a entonação de cortesia."
+        },
+        {
+          "titulo": "5. Conversas telefônicas e mensagens",
+          "texto": "No último capítulo você aprende a se comunicar por telefone e texto. Passo 1: Inicie a ligação com “Hello, this is Maria speaking”. Passo 2: Identifique a pessoa – “May I speak with John, please?”. Passo 3: Explique o motivo – “I’m calling about the appointment on Thursday”. Passo 4: Use frases de espera – “One moment, please” ou “I’ll check and get back to you”. Passo 5: Termine com cortesia – “Thank you for your time, goodbye”. Para mensagens, aprenda abreviações úteis – “FYI”, “ASAP”, “Let me know”. Exemplo telefônico: “Hello, this is Carlos. May I speak with Ana?” – “Speaking, how can I help you?” – “I’d like to confirm the delivery schedule for tomorrow.” Mini‑exercício: Grave uma simulação de chamada de 45 segundos, seguindo os passos acima, ou escreva uma mensagem curta (até 3 linhas) para confirmar um encontro. Revise se incluiu todas as partes essenciais."
+        }
+      ],
+      "id": "p20261009-1",
+      "criado_em": "2026-10-09T06:22:20-03:00",
+      "preco_texto": "R$ 8,90",
+      "status": "pronto",
+      "plataforma": "cakto",
+      "link_compra": "https://pay.cakto.com.br/9xacowi",
+      "historico": [
+        {
+          "quando": "2026-10-09T06:22:20-03:00",
+          "evento": "aprovado por orientador + travas de código em 1 rodada(s)"
+        },
+        {
+          "quando": "2026-10-09T06:22:23-03:00",
+          "evento": "registrado na cakto por API; link recebido"
+        }
+      ]
     }
   ]
 }
