@@ -207,35 +207,100 @@ def verificar_anuncio(produto: dict | None, texto: str, tipo: str) -> list[str]:
 
 
 # ----------------------------------------------------------------------------
-# Legenda por rede: hashtags em 3 camadas (topo = amplas, meio = do tema, fundo = nicho) + CTA do canal.
-# Feito em código: o modelo não escolhe hashtag nem link, então nada sai irrelevante, proibido ou inventado.
+# Legenda por rede: 20 hashtags em 3 camadas + CTA do canal. Feito em código: o modelo não escolhe hashtag nem link.
+#   camada 1 (amplas, 8, iguais em todo post) + camada 2 (do tema, 7) + camada 3 (do nicho, 5) = 20 (máx. 25).
+# "prioridade" são as 5 mais fortes do tema: entram primeiro, então se uma rede limitar (Instagram vem reduzindo
+# o teto de hashtags por legenda) ou o robô precisar cortar, são as que sobram.
 # ----------------------------------------------------------------------------
-HASHTAGS_CAMADAS = {
-    "receitas": (("#receitas", "#alimentacaosaudavel"), ("#marmita", "#marmitafit", "#cardapiosemanal"),
-                 ("#habitossaudaveis", "#rotinasaudavel")),
-    "financas": (("#financaspessoais", "#educacaofinanceira"), ("#orcamento", "#controlefinanceiro", "#organizacao"),
-                 ("#habitos", "#planejamento")),
-    "renda": (("#rendaextra", "#habilidades"), ("#trabalhoonline", "#freelancer", "#aprender"),
-              ("#habitos", "#organizacao")),
-    "produtividade": (("#produtividade", "#organizacao"), ("#rotina", "#foco", "#gestaodotempo"),
-                      ("#habitos", "#disciplina")),
+HASHTAGS_AMPLAS = ("#dicas", "#rotina", "#organizacao", "#saude", "#bemestar", "#vidasaudavel", "#motivacao",
+                   "#lifestyle")
+HASHTAGS_TEMAS = {
+    "receitas": {
+        "prioridade": ("#marmitafit", "#alimentacaosaudavel", "#receitasfit", "#marmitas", "#cardapiosemanal"),
+        "tema": ("#alimentacaosaudavel", "#receitasfit", "#comidasaudavel", "#reeducacaoalimentar", "#nutricao",
+                 "#comidafit", "#marmitafitness"),
+        "nicho": ("#marmitafit", "#marmitas", "#cardapiosemanal", "#marmitando", "#receitafitfacil"),
+    },
+    "financas": {
+        "prioridade": ("#financaspessoais", "#educacaofinanceira", "#orcamentofamiliar", "#controlefinanceiro",
+                       "#financasdomesticas"),
+        "tema": ("#financaspessoais", "#educacaofinanceira", "#controlefinanceiro", "#dinheiro", "#economizar",
+                 "#planejamentofinanceiro", "#organizacaofinanceira"),
+        "nicho": ("#orcamentofamiliar", "#financasdomesticas", "#planilhafinanceira", "#contasemdia",
+                  "#economiadomestica"),
+    },
+    "renda": {
+        "prioridade": ("#rendaextra", "#trabalhoonline", "#freelancer", "#habilidades", "#trabalharemcasa"),
+        "tema": ("#rendaextra", "#trabalhoonline", "#freelancer", "#empreendedorismo", "#autonomo", "#aprendizado",
+                 "#habilidades"),
+        "nicho": ("#trabalharemcasa", "#servicosonline", "#freelancers", "#rendaextraonline", "#profissaodigital"),
+    },
+    "casa": {
+        "prioridade": ("#organizacaodacasa", "#casaorganizada", "#rotinadecasa", "#limpezadacasa", "#donadecasa"),
+        "tema": ("#organizacaodacasa", "#casaorganizada", "#limpeza", "#faxina", "#lar", "#vidadecasa",
+                 "#minimalismo"),
+        "nicho": ("#rotinadecasa", "#limpezadacasa", "#donadecasa", "#cronogramadelimpeza", "#casaemordem"),
+    },
+    "produtividade": {
+        "prioridade": ("#produtividade", "#foco", "#gestaodotempo", "#organizacaopessoal", "#habitos"),
+        "tema": ("#produtividade", "#foco", "#gestaodotempo", "#planejamento", "#habitos", "#disciplina", "#metas"),
+        "nicho": ("#organizacaopessoal", "#rotinaprodutiva", "#focoedisciplina", "#produtividadepessoal",
+                  "#desenvolvimentopessoal"),
+    },
 }
 _PALAVRAS_TEMA = [("renda", r"renda extra"), ("receitas", r"marmit|receit|cardapio|aliment"),
-                  ("financas", r"financ|orcament")]
+                  ("financas", r"financ|orcament"), ("casa", r"organizacao da casa|da casa|limpeza|faxina")]
 _RE_SO_HASHTAGS = re.compile(r"(?:\s*#\w+)+\s*")
+MAX_HASHTAGS = 25
+INSTAGRAM_LIMITE_CARACTERES = 2200
 
 
-def tema_da_legenda(produto: dict | None, texto: str = "") -> str:
-    base = sem_acentos(" ".join(str((produto or {}).get(k) or "") for k in ("nome", "promessa")) + " " + (texto or "")).lower()
+def _tema_em(texto: str) -> str | None:
+    base = sem_acentos(texto or "").lower()
     for tema, padrao in _PALAVRAS_TEMA:
         if re.search(padrao, base):
             return tema
-    return "produtividade"
+    return None
 
 
-def hashtags_em_camadas(produto: dict | None, texto: str = "") -> str:
-    topo, meio, fundo = HASHTAGS_CAMADAS[tema_da_legenda(produto, texto)]
-    return " ".join(topo + meio + fundo)
+def tema_da_legenda(produto: dict | None, texto: str = "", tipo: str | None = None) -> str:
+    """O tema vem do texto; se o texto não diz, do produto (menos em post de VALOR, que é dica geral e não vende o produto)."""
+    tema = _tema_em(texto)
+    if tema is None and produto and tipo != "VALOR":
+        tema = _tema_em(f"{produto.get('nome') or ''} {produto.get('promessa') or ''}")
+    return tema or "produtividade"
+
+
+def _quantidade(rede: str | None) -> int:
+    n = cfg.HASHTAGS_INSTAGRAM if rede == "instagram" else cfg.HASHTAGS_FACEBOOK
+    return max(1, min(int(n), MAX_HASHTAGS))
+
+
+def lista_de_hashtags(produto: dict | None, texto: str = "", tipo: str | None = None, quantidade: int = 20) -> list[str]:
+    """Hashtags únicas, na ordem: 5 de prioridade do tema, amplas, resto do tema, resto do nicho. Corta em `quantidade`."""
+    t = HASHTAGS_TEMAS[tema_da_legenda(produto, texto, tipo)]
+    vistas, saida = set(), []
+    for h in (*t["prioridade"], *HASHTAGS_AMPLAS, *t["tema"], *t["nicho"]):
+        if h not in vistas and not encontrar_termos(h):
+            vistas.add(h)
+            saida.append(h)
+    return saida[:max(1, min(quantidade, MAX_HASHTAGS))]
+
+
+def hashtags_em_camadas(produto: dict | None, texto: str = "", tipo: str | None = None, rede: str | None = None) -> str:
+    return " ".join(lista_de_hashtags(produto, texto, tipo, _quantidade(rede)))
+
+
+def reduzir_hashtags(legenda: str, n: int = 5) -> str:
+    """Mantém só as `n` primeiras hashtags do bloco final (as de prioridade): plano B se a rede recusar muitas."""
+    linhas = (legenda or "").rstrip().split("\n")
+    if linhas and _RE_SO_HASHTAGS.fullmatch(linhas[-1]):
+        linhas[-1] = " ".join(linhas[-1].split()[:max(0, n)])
+    return "\n".join(linhas).rstrip()
+
+
+def erro_de_hashtag(mensagem: str) -> bool:
+    return bool(re.search(r"hashtag", str(mensagem or ""), re.I))
 
 
 def _sem_hashtags_no_fim(texto: str) -> str:
@@ -260,14 +325,29 @@ def cta_da_rede(rede: str) -> str:
     return f"Veja todos os guias: {cfg.LINK_FACEBOOK}"
 
 
-def finalizar_para_rede(produto: dict | None, texto: str, rede: str) -> str:
-    """Legenda final da rede ('instagram' ou 'facebook'): texto + CTA do canal + hashtags em 3 camadas.
+def finalizar_para_rede(produto: dict | None, texto: str, rede: str, tipo: str | None = None) -> str:
+    """Legenda final da rede ('instagram' ou 'facebook'): texto + CTA do canal + 20 hashtags em 3 camadas.
     Troca as hashtags que o modelo escreveu no fim do texto; não mexe no resto."""
     t = _sem_hashtags_no_fim(texto)
     alvo = cfg.LINK_BIO_INSTAGRAM if rede == "instagram" else cfg.LINK_FACEBOOK
     if _norm_link(alvo) not in _norm_link(t):
         t = f"{t}\n\n{cta_da_rede(rede)}".strip()
-    return f"{t}\n\n{hashtags_em_camadas(produto, texto)}"
+    legenda = f"{t}\n\n{hashtags_em_camadas(produto, texto, tipo, rede)}"
+    if rede == "instagram" and len(legenda) > INSTAGRAM_LIMITE_CARACTERES:
+        legenda = reduzir_hashtags(legenda, 5)
+    return legenda
+
+
+# Publicação orgânica na Meta é pública por padrão. Segmentar (idade, gênero, local, interesse) exigiria parâmetros
+# explícitos que o robô NUNCA envia; o rótulo abaixo só sai se o payload realmente não tiver nenhum deles.
+CHAVES_DE_SEGMENTACAO = ("targeting", "feed_targeting", "audience", "custom_audiences", "age_min", "age_max",
+                         "geo_locations", "countries", "genders", "interests", "privacy", "audience_restrictions")
+PUBLICO_GERAL = "para todos os públicos (publicação orgânica pública, sem segmentação de idade, gênero, local ou interesse)"
+
+
+def rotulo_publico(*payloads: dict) -> str:
+    achadas = sorted({k for p in payloads for k in (p or {}) if k in CHAVES_DE_SEGMENTACAO})
+    return f"SEGMENTADO ({', '.join(achadas)})" if achadas else PUBLICO_GERAL
 
 
 _HASHTAGS = "#infoprodutos #guiapratico #aprendizado #conteudodigital #dicaspraticas"
@@ -342,6 +422,6 @@ def preparar_legenda(produto: dict | None, texto: str, tipo: str,
             acoes.append("acrescentou o link do catálogo")
 
     if rede in ("instagram", "facebook"):
-        t = finalizar_para_rede(produto, t, rede)
+        t = finalizar_para_rede(produto, t, rede, tipo)
         acoes.append(f"acrescentou CTA e hashtags em 3 camadas ({rede})")
     return t, acoes, verificar_anuncio(produto, t, tipo)

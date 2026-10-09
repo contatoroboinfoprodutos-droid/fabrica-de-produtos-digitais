@@ -11,7 +11,7 @@ import re
 import time
 
 from . import catalogo, config_fabrica as cfg, llms, travas
-from .texto import formatar_preco, parse_preco
+from .texto import formatar_preco, parse_preco, sem_acentos
 
 logger = logging.getLogger("fabrica")
 
@@ -296,14 +296,34 @@ def tema_da_rodada(topico: str = "") -> str:
     topico = (topico or "").strip()
     if topico and topico != "Produto em destaque do catálogo desta semana":
         return topico
-    n = len(catalogo.carregar()["produtos"])
+    produtos = catalogo.carregar()["produtos"]
+    recentes = produtos[-5:]
+    usados = {sem_acentos(str(p.get("nicho") or "")).lower() for p in recentes}
+    nomes = " ".join(sem_acentos(str(p.get("nome") or "")).lower() for p in recentes)
+
+    def repetido(nicho: str) -> bool:
+        chave = sem_acentos(nicho).lower()
+        if chave in usados:
+            return True
+        palavras = [w for w in re.findall(r"[a-z]{5,}", chave) if w not in _GENERICAS][:2]
+        return bool(palavras) and all(w in nomes for w in palavras)
+
+    n = len(produtos)
+    for i in range(len(cfg.NICHOS)):  # roda a lista a partir da vez e pula o que apareceu nos últimos 5 produtos
+        nicho = cfg.NICHOS[(n + i) % len(cfg.NICHOS)]
+        if not repetido(nicho):
+            return nicho
     return cfg.NICHOS[n % len(cfg.NICHOS)]
+
+
+_GENERICAS = {"para", "pessoais", "iniciantes", "digital", "digitais", "pequenos", "negocios", "rotina"}
 
 
 def criar_e_guardar(tema: str, executor=None, tipo: str | None = None) -> dict:
     """Fabrica um produto e registra o resultado no catálogo (aprovado ou reprovado)."""
     res = fabricar(tema, executor=executor, tipo=tipo or tipo_da_rodada())
     if res["status"] == "aprovado":
+        res["produto"]["nicho"] = tema
         reg = catalogo.adicionar(res["produto"], "aprovado",
                                  f"aprovado por {res['aprovado_por']} em {len(res['rodadas'])} rodada(s)")
         res["registro"] = reg

@@ -17,6 +17,7 @@ from pydantic import PrivateAttr
 from crewai import LLM, Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 
+from agents import model_healer
 from config import get_settings
 from tools.crewai_meta_tools import PublishToFacebookTool, PublishToInstagramTool
 
@@ -63,6 +64,7 @@ class GroqWithGeminiFailoverLLM(LLM):
             model=settings.gemini_model,
             api_key=settings.gemini_api_key,
             temperature=0.7,
+            timeout=240,
             max_tokens=1024,
         )
 
@@ -131,13 +133,21 @@ def get_llm() -> LLM:
     if provider == 'openrouter':
         if not settings.openrouter_api_key:
             raise RuntimeError('OPENROUTER_API_KEY não configurada (LLM_PROVIDER=openrouter).')
-        return LLM(
-            model="openai/" + settings.openrouter_model,
-            base_url="https://openrouter.ai/api/v1",
-            api_key=settings.openrouter_api_key,
-            temperature=0.7,
-            max_tokens=2048,
-        )
+        modelo = model_healer.resolver_modelo(settings.openrouter_model, settings.openrouter_api_key)
+        if modelo:
+            return LLM(
+                model="openai/" + modelo,
+                base_url="https://openrouter.ai/api/v1",
+                api_key=settings.openrouter_api_key,
+                temperature=0.7,
+                timeout=240,
+                max_tokens=2048,
+            )
+        # Nenhum modelo gratuito respondeu: segue com Gemini ou Groq se houver chave (nunca um modelo pago).
+        logger.warning("Nenhum modelo gratuito do OpenRouter respondeu; usando GEMINI/GROQ se houver chave.")
+        provider = 'groq' if (settings.groq_api_key and not settings.gemini_api_key) else 'gemini'
+        if not (settings.gemini_api_key or settings.groq_api_key):
+            raise RuntimeError('Sem modelo gratuito no OpenRouter e sem GEMINI_API_KEY/GROQ_API_KEY.')
 
     # Groq: também compatível com a API da OpenAI (mesmo truque do OpenRouter).
     if provider == 'groq' and settings.groq_api_key:
@@ -149,6 +159,7 @@ def get_llm() -> LLM:
             base_url="https://api.groq.com/openai/v1",
             api_key=settings.groq_api_key,
             temperature=0.7,
+            timeout=240,
             max_tokens=2048,
         )
 
@@ -159,6 +170,7 @@ def get_llm() -> LLM:
             model=settings.gemini_model,
             api_key=settings.gemini_api_key,
             temperature=0.7,
+            timeout=240,
             max_tokens=2048,
         )
     return GroqWithGeminiFailoverLLM(

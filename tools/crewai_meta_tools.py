@@ -4,6 +4,7 @@ Tools do CrewAI que expõem o MetaGraphAPI aos agentes.
 Cada tool tem um schema de argumentos explícito (pydantic) para que o LLM
 saiba exatamente quais campos preencher ao chamá-la.
 """
+import time
 from typing import Optional, Type
 
 from crewai.tools import BaseTool
@@ -60,6 +61,7 @@ class PublishToFacebookTool(BaseTool):
         if get_settings().dry_run:
             return (
                 "[DRY_RUN] Facebook NÃO publicado (nenhuma chamada foi feita à Meta). "
+                f"Público: {travas.rotulo_publico()} "
                 f"image_url={image_url!r} message={message!r}" + _nota_travas(acoes, problemas)
             )
         if marcas.ja_publicado("facebook"):
@@ -70,12 +72,17 @@ class PublishToFacebookTool(BaseTool):
             return "ERRO: publicação no Facebook bloqueada pelas travas: " + "; ".join(problemas)
         link = produto["link_compra"]  # o link anexado é sempre o do catálogo
         api = MetaGraphAPI()
-        try:
-            result = api.publish_facebook_post(message=message, link=link, image_url=image_url)
-            marcas.marcar("facebook", {"post_id": result.post_id})
-            return f"Publicado no Facebook com sucesso. post_id={result.post_id}"
-        except MetaGraphAPIError as exc:
-            return f"ERRO ao publicar no Facebook: {exc}"
+        ultimo = None
+        for tentativa in range(3):  # só o Facebook é repetido; espera 4s, 8s entre as tentativas
+            try:
+                result = api.publish_facebook_post(message=message, link=link, image_url=image_url)
+                marcas.marcar("facebook", {"post_id": result.post_id})
+                return f"Publicado no Facebook com sucesso. post_id={result.post_id}"
+            except MetaGraphAPIError as exc:
+                ultimo = exc
+                if tentativa < 2:
+                    time.sleep(4 * (tentativa + 1))
+        return f"ERRO ao publicar no Facebook: {ultimo}"
 
 
 # ---------------------------------------------------------------------- #
@@ -102,6 +109,7 @@ class PublishToInstagramTool(BaseTool):
         if get_settings().dry_run:
             return (
                 "[DRY_RUN] Instagram NÃO publicado (nenhuma chamada foi feita à Meta). "
+                f"Público: {travas.rotulo_publico()} "
                 f"image_url={image_url!r} caption={caption!r}" + _nota_travas(acoes, problemas)
             )
         if marcas.ja_publicado("instagram"):
@@ -111,9 +119,18 @@ class PublishToInstagramTool(BaseTool):
                 marcas.marcar_bloqueio("sem produto pronto no catálogo")  # repetir não resolve
             return "ERRO: publicação no Instagram bloqueada pelas travas: " + "; ".join(problemas)
         api = MetaGraphAPI()
-        try:
-            result = api.publish_instagram_post(image_url=image_url, caption=caption)
-            marcas.marcar("instagram", {"post_id": result.post_id})
-            return f"Publicado no Instagram com sucesso. post_id={result.post_id}"
-        except MetaGraphAPIError as exc:
-            return f"ERRO ao publicar no Instagram: {exc}"
+        legenda, aviso, ultimo = caption, "", None
+        for tentativa in range(3):  # só o Instagram é repetido; espera 4s, 8s entre as tentativas
+            try:
+                result = api.publish_instagram_post(image_url=image_url, caption=legenda)
+                marcas.marcar("instagram", {"post_id": result.post_id})
+                return f"Publicado no Instagram com sucesso. post_id={result.post_id}{aviso}"
+            except MetaGraphAPIError as exc:
+                ultimo = exc
+                if travas.erro_de_hashtag(str(exc)) and legenda == caption:
+                    legenda = travas.reduzir_hashtags(caption, 5)  # teto de hashtags do Instagram
+                    aviso = " (legenda reduzida para as 5 hashtags principais)"
+                    continue
+                if tentativa < 2:
+                    time.sleep(4 * (tentativa + 1))
+        return f"ERRO ao publicar no Instagram: {ultimo}"

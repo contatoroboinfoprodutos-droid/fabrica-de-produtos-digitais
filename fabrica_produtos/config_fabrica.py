@@ -20,7 +20,10 @@ def _num(nome: str, padrao: float) -> float:
 # --- Interruptores ---
 DRY_RUN = _bool("FABRICA_DRY_RUN", True)      # True: não cria nada nas plataformas (só lê)
 PAUSADA = _bool("FABRICA_PAUSADA", False)     # True: a fábrica não cria produto novo
-MAX_PRODUTOS_POR_DIA = int(_num("FABRICA_MAX_POR_DIA", 1))
+HASHTAGS_INSTAGRAM = int(_num("FABRICA_HASHTAGS_INSTAGRAM", 20))
+HASHTAGS_FACEBOOK = int(_num("FABRICA_HASHTAGS_FACEBOOK", 20))
+MAX_PRODUTOS_POR_DIA = int(_num("FABRICA_MAX_POR_DIA", 5))   # teto por dia; cada execução "criar" faz 1 produto
+LLM_TIMEOUT = _num("FABRICA_LLM_TIMEOUT", 240)                # segundos por chamada de IA (sem isso uma chamada pode travar por horas)
 MAX_RODADAS = max(1, int(_num("FABRICA_MAX_RODADAS", 3)))
 
 # --- Onde ficam os dados (versionados no repositório) ---
@@ -62,4 +65,7 @@ NICHOS = [
     "Redação e copywriting",
     "Estudos e concentração",
     "Organização do home office",
+    "Finanças domésticas e orçamento da família",
+    "Organização da casa e rotina de limpeza",
+    "Renda extra com habilidades e serviços online",
 ]

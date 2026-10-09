@@ -179,6 +179,34 @@ def _problema_do_link(filename, caption):
     return ""
 
 
+def _payload_facebook(caption: str) -> dict:
+    """Corpo do POST /photos (sem o token). Sem nenhum campo de segmentação: o post é público para todos."""
+    return {"caption": caption, "published": "true"}
+
+
+def _payload_instagram(image_url: str, caption: str) -> dict:
+    """Corpo do POST /media (sem o token). Sem nenhum campo de segmentação."""
+    return {"image_url": image_url, "caption": caption}
+
+
+def _com_tentativas(chamada, tentativas: int = 3, espera: float = 4.0):
+    """Repete a chamada à Meta até 3x com espera crescente (4s, 8s) em erro de rede, 429 ou 5xx.
+    Erro 4xx (token, legenda, permissão) volta na hora: repetir não resolve. Só a rede que falhou é repetida."""
+    for i in range(tentativas):
+        try:
+            r = chamada()
+        except requests.RequestException:
+            if i == tentativas - 1:
+                raise
+        else:
+            if r.status_code != 429 and r.status_code < 500:
+                return r
+            if i == tentativas - 1:
+                return r
+        time.sleep(espera * (i + 1))
+
+
+
 @tool("lt_publicar_meta")
 def lt_publicar_meta(filename: str, caption: str) -> str:
     """Publica a imagem gerada por lt_render_card na página do Facebook e no Instagram.
@@ -191,12 +219,18 @@ def lt_publicar_meta(filename: str, caption: str) -> str:
     if problema_link and problema_link not in problemas:
         problemas.append(problema_link)
     problema = "; ".join(problemas)
+    # Uma legenda por rede: CTA do canal + hashtags em 3 camadas, feitos em código (travas.finalizar_para_rede)
+    tipo_post = _tipo_do_arquivo(filename)
+    caption_fb = travas.finalizar_para_rede(cfg.PRODUTO, caption, "facebook", tipo_post)
+    caption_ig = travas.finalizar_para_rede(cfg.PRODUTO, caption, "instagram", tipo_post)
+    payload_fb, payload_ig = _payload_facebook(caption_fb), _payload_instagram("(URL pública da foto)", caption_ig)
     if cfg.DRY_RUN:
         trava_info = f"\n[TRAVAS] ajustes automáticos: {'; '.join(acoes)}" if acoes else ""
         aviso = f"\n[AVISO] Em modo real esta publicação seria BLOQUEADA: {problema}" if problema else ""
         return (f"[DRY_RUN] Facebook e Instagram NÃO publicados. Arquivo={filename}\n"
-                f"Legenda Facebook:\n{travas.finalizar_para_rede(cfg.PRODUTO, caption, 'facebook')}\n\n"
-                f"Legenda Instagram:\n{travas.finalizar_para_rede(cfg.PRODUTO, caption, 'instagram')}{trava_info}{aviso}")
+                f"Público: {travas.rotulo_publico(payload_fb, payload_ig)}\n"
+                f"Legenda Facebook:\n{caption_fb}\n\n"
+                f"Legenda Instagram:\n{caption_ig}{trava_info}{aviso}")
     if marcas.ja_publicado("facebook") and marcas.ja_publicado("instagram"):
         return "Já publicado nesta execução no Facebook e no Instagram. Nada a repetir: finalize."
     if PLACEHOLDER_LINK in caption:
@@ -211,9 +245,6 @@ def lt_publicar_meta(filename: str, caption: str) -> str:
     path = os.path.join(cfg.OUTPUT_DIR, filename)
     if not os.path.exists(path):
         return f"ERRO: arquivo {path} não encontrado (rode lt_render_card antes)."
-    # Uma legenda por rede: CTA do canal + hashtags em 3 camadas, feitos em código (travas.finalizar_para_rede)
-    caption_fb = travas.finalizar_para_rede(cfg.PRODUTO, caption, "facebook")
-    caption_ig = travas.finalizar_para_rede(cfg.PRODUTO, caption, "instagram")
 
     resultado = []
     # 1) Facebook: envia o arquivo direto para a página (se uma tentativa anterior já publicou, não repete)
@@ -224,10 +255,12 @@ def lt_publicar_meta(filename: str, caption: str) -> str:
             foto_id = anterior.get("photo_id")
             resultado.append("Facebook: já publicado antes nesta execução (não repete)")
         else:
-            with open(path, "rb") as f:
-                r = requests.post(_graph(f"{cfg.FB_PAGE_ID}/photos"),
-                                  data={"caption": caption_fb, "published": "true", "access_token": token},
-                                  files={"source": f}, timeout=120)
+            def _enviar_fb():
+                with open(path, "rb") as f:
+                    return requests.post(_graph(f"{cfg.FB_PAGE_ID}/photos"),
+                                         data={**payload_fb, "access_token": token},
+                                         files={"source": f}, timeout=120)
+            r = _com_tentativas(_enviar_fb)
             if r.status_code != 200:
                 return f"Facebook: ERRO {r.status_code} {r.text}\nInstagram: não tentado (sem imagem pública)."
             foto_id = r.json().get("id")
@@ -246,8 +279,15 @@ def lt_publicar_meta(filename: str, caption: str) -> str:
         info = requests.get(_graph(foto_id), params={"fields": "images", "access_token": token}, timeout=30)
         info.raise_for_status()
         imagem_url = info.json()["images"][0]["source"]
-        c = requests.post(_graph(f"{cfg.IG_ACCOUNT_ID}/media"), data={
-            "image_url": imagem_url, "caption": caption_ig, "access_token": token}, timeout=60)
+        legenda_ig = caption_ig
+        c = _com_tentativas(lambda: requests.post(_graph(f"{cfg.IG_ACCOUNT_ID}/media"), data={
+            **_payload_instagram(imagem_url, legenda_ig), "access_token": token}, timeout=60))
+        if c.status_code != 200 and travas.erro_de_hashtag(c.text):
+            # O Instagram vem limitando hashtags por legenda: tenta de novo só com as 5 de prioridade.
+            legenda_ig = travas.reduzir_hashtags(caption_ig, 5)
+            resultado.append("Instagram: legenda recusada por excesso de hashtags; repetindo com as 5 principais")
+            c = _com_tentativas(lambda: requests.post(_graph(f"{cfg.IG_ACCOUNT_ID}/media"), data={
+                **_payload_instagram(imagem_url, legenda_ig), "access_token": token}, timeout=60))
         if c.status_code != 200:
             resultado.append(f"Instagram: ERRO container {c.status_code} {c.text}")
             return "\n".join(resultado)
@@ -261,8 +301,8 @@ def lt_publicar_meta(filename: str, caption: str) -> str:
                 resultado.append("Instagram: ERRO ao processar a imagem")
                 return "\n".join(resultado)
             time.sleep(3)
-        p = requests.post(_graph(f"{cfg.IG_ACCOUNT_ID}/media_publish"), data={
-            "creation_id": container, "access_token": token}, timeout=60)
+        p = _com_tentativas(lambda: requests.post(_graph(f"{cfg.IG_ACCOUNT_ID}/media_publish"), data={
+            "creation_id": container, "access_token": token}, timeout=60))
         if p.status_code == 200:
             marcas.marcar("instagram", {"media_id": p.json().get("id")})
             resultado.append(f"Instagram: publicado (media_id={p.json().get('id')})")
