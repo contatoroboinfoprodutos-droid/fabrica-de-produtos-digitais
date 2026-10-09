@@ -3,113 +3,88 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fábrica de Produtos Digitais</title>
+<title>Fábrica de Produtos Digitais - Guias R$ 8,90</title>
+<meta name="description" content="Fábrica de Produtos Digitais - Guias em PDF, curtos e práticos">
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:#0a0a0a;color:#fff;font-family:-apple-system,BlinkMacSystemFont,Inter,sans-serif;min-height:100vh;padding:16px}
-.container{max-width:440px;margin:0 auto}
-.badge{display:inline-block;background:#facc15;color:#000;font-weight:900;font-size:10px;padding:6px 10px;border-radius:6px;margin-bottom:8px}
-.tag{display:inline-block;background:#facc15;color:#000;font-weight:900;font-size:10px;padding:5px 12px;border-radius:999px;margin-bottom:10px}
-h1{font-size:30px;font-weight:900;line-height:0.92;letter-spacing:-1px;margin:8px 0 12px}
-h1 span{color:#facc15}
-.sub{color:#a1a1aa;font-size:13px;margin-bottom:14px;line-height:1.4}
-.sub strong{color:#fff}
-.search-wrap{position:sticky;top:10px;z-index:10;background:#0a0a0a;padding:8px 0 12px}
-.search{width:100%;background:#141414;border:1px solid #232323;border-radius:999px;padding:12px 16px;color:#fff;font-size:13px;outline:none}
-.search:focus{border-color:#facc15}
-.search::placeholder{color:#52525b}
-.count{color:#71717a;font-size:11px;margin:8px 2px 0;display:flex;justify-content:space-between}
-.products{display:flex;flex-direction:column;gap:12px;margin-top:10px}
-.card{background:#141414;border:1px solid #232323;border-radius:18px;padding:16px;animation:fade .2s}
-@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-.meta{display:flex;justify-content:space-between;gap:10px;margin-bottom:6px}
-.card h3{font-size:14px;font-weight:800;line-height:1.25;flex:1}
-.price{border:1.5px solid #facc15;color:#facc15;font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px;white-space:nowrap;height:fit-content}
-.desc{color:#a1a1aa;font-size:12px;line-height:1.4;margin:8px 0 12px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.btn{display:block;width:100%;background:#facc15;color:#000;text-align:center;font-weight:900;font-size:13px;padding:13px;border-radius:999px;text-decoration:none}
-.btn-more{width:100%;background:transparent;border:1px solid #27272a;color:#fff;padding:12px;border-radius:999px;font-weight:700;font-size:13px;margin-top:14px;cursor:pointer}
-.btn-more:hover{border-color:#facc15;color:#facc15}
-.footer{text-align:center;margin-top:24px;color:#52525b;font-size:10px}
+  :root{--amarelo:#FFD60A;--preto:#0A0A0A;--cinza:#1A1A1A}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:radial-gradient(ellipse at center,#3a2e00 0%,#0A0A0A 70%);color:#fff;font-family:Inter,system-ui,sans-serif;min-height:100vh}
+  header{padding:24px;display:flex;justify-content:space-between;align-items:center;max-width:1100px;margin:0 auto}
+  .logo{background:var(--amarelo);color:#000;padding:8px 18px;border-radius:999px;font-weight:900}
+  .hero{text-align:center;padding:50px 20px;max-width:800px;margin:0 auto}
+  .hero h1{font-size:40px;line-height:1.1;margin:18px 0}
+  .cta{background:var(--amarelo);color:#000;padding:16px 32px;border-radius:999px;font-weight:800;text-decoration:none;display:inline-block;font-size:18px}
+  #status{opacity:.7;font-size:13px;margin-top:14px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;max-width:1100px;margin:30px auto;padding:0 20px}
+  .card{background:#1A1A1A;border:1px solid #2a2a2a;border-radius:20px;padding:22px}
+  .card h3{margin:10px 0;font-size:18px}
+  .card small{opacity:.7;display:block;margin:8px 0}
+  .price{background:var(--amarelo);color:#000;display:inline-block;padding:6px 14px;border-radius:999px;font-weight:800;margin-top:10px}
+  .meta{font-size:11px;opacity:.5;margin-top:8px}
+  footer{text-align:center;padding:30px;opacity:.5;font-size:12px}
 </style>
 </head>
 <body>
-<div class="container">
-<div class="badge">FPD</div>
-<div class="tag">TODOS EM PDF IMEDIATO</div>
-<h1>FÁBRICA DE<br><span>PRODUTOS</span> DIGITAIS</h1>
-<p class="sub"><strong>Escolha seu guia abaixo 👇</strong><br>Todos em PDF imediato, entrega na hora.</p>
-
-<div class="search-wrap">
-<input id="busca" class="search" placeholder="🔍 Buscar: finanças, receitas, foco, ansiedade...">
-<div class="count"><span id="contador">Carregando...</span><span id="contadorFiltro"></span></div>
-</div>
-
-<div id="lista" class="products"></div>
-<button id="verMais" class="btn-more" style="display:none">Ver mais 20 ▼</button>
-
-<div class="footer">Pagamento seguro via Cakto • Entrega instantânea em PDF<br><br><span style="background:#facc15;color:#000;font-weight:900;padding:3px 7px;border-radius:5px">FPD</span> <strong style="color:#fff">FÁBRICA DE PRODUTOS DIGITAIS</strong></div>
-</div>
+<header><div class="logo">FPD ⚡</div><div style="border:1px solid #FFD60A;padding:6px 12px;border-radius:999px;font-size:12px">Fábrica de Produtos Digitais</div></header>
+<section class="hero">
+  <h1>Guias em PDF, curtos e práticos<br>por R$ 8,90</h1>
+  <p>Sem robô, sem enrolação. Conteúdo direto do GitHub.</p>
+  <a class="cta" href="https://bit.ly/4rWbLt5" target="_blank">Ver guias - R$ 8,90</a>
+  <div id="status">Lendo legendas.txt direto do GitHub...</div>
+</section>
+<div id="grid" class="grid"></div>
+<footer>
+  fabricadeprodutosdigitais.github.io/fabrica-de-produtos-digitais • @fabrica.produtos.digitais • Link na bio: bit.ly/4rWbLt5<br>
+  Marca humana FPD ⚡ - sem nome de robô
+</footer>
 <script>
-let TODOS = [];
-let FILTRADOS = [];
-let MOSTRADOS = 20;
-const POR_PAGINA = 20;
-
-async function carregar(){
-  try{
-    const r = await fetch('./catalogo/catalogo.json?v='+Date.now());
-    const data = await r.json();
-    let prods = [];
-    if(Array.isArray(data)) prods = data;
-    else if(data.produtos) prods = data.produtos;
-    else if(data.pacotes) prods = data.pacotes;
-    prods = prods.filter(p=>p && (p.nome||p.titulo) && (!p.status || p.status==='pronto') && /^https:\/\/pay\.cakto\.com\.br\/.+/.test(p.link_compra||p.link||''));
-    prods.sort((a,b)=> new Date(b.criado_em||0) - new Date(a.criado_em||0));
-    TODOS = prods;
-    FILTRADOS = prods;
-    document.getElementById('contador').textContent = TODOS.length + ' guias no catálogo';
-    render(true);
-  }catch(e){
-    document.getElementById('lista').innerHTML = '<p style="color:#facc15;text-align:center">Erro ao carregar catalogo/catalogo.json</p>';
+const RAW_URLS = [
+  'https://raw.githubusercontent.com/fabricadeprodutosdigitais/fabrica-de-produtos-digitais/main/legendas.txt',
+  './legendas.txt'
+];
+function parseLegendas(text){
+  const blocks = text.split('===').map(s=>s.trim()).filter(Boolean);
+  const produtos = [];
+  for(let b of blocks){
+    const lines = b.split('\n').map(l=>l.trim()).filter(l=>l);
+    if(lines.length < 2) continue;
+    let file='', titulo='', desc='', tags='', link='';
+    if(lines[0].endsWith('.mp4')){
+      file=lines[0]; titulo=lines[1]||file; desc=lines[2]||''; tags=lines.find(l=>l.startsWith('#'))||''; link=lines.find(l=>l.includes('bit.ly'))||'Link na bio: bit.ly/4rWbLt5';
+    } else {
+      titulo=lines[0]; desc=lines[1]||''; tags=lines.find(l=>l.startsWith('#'))||''; link=lines.find(l=>l.includes('bit.ly'))||'';
+    }
+    let musica='lofi.mp3';
+    const low=(titulo+' '+tags).toLowerCase();
+    if(low.includes('receita')||low.includes('marmita')||low.includes('fit')) musica='happy.mp3';
+    else if(low.includes('produtiv')||low.includes('renda')||low.includes('finan')||low.includes('dinheiro')) musica='corporate.mp3';
+    produtos.push({file,titulo,desc,tags,link,musica});
   }
+  return produtos;
 }
-const esc = t => String(t==null?'':t).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function render(reset){
-  if(reset){ MOSTRADOS = POR_PAGINA; document.getElementById('lista').innerHTML=''; }
-  const lista = document.getElementById('lista');
-  const slice = FILTRADOS.slice(0, MOSTRADOS);
-  lista.innerHTML='';
-  slice.forEach(p=>{
-    const nome = p.nome||p.titulo||'Guia';
-    const desc = p.promessa||p.descricao_oferta||p.descricao||'';
-    const link = p.link_compra||p.link||'#';
-    const preco = p.preco_texto || (p.preco? 'R$ '+String(p.preco).replace('.',',') : 'R$ 8,90');
-    const div = document.createElement('div');
-    div.className='card';
-    div.innerHTML = `<div class="meta"><h3>${esc(nome)}</h3><span class="price">${esc(preco)}</span></div><div class="desc">${esc(desc)}</div><a class="btn" href="${esc(link)}" target="_blank" rel="noopener">COMPRAR AGORA</a>`;
-    lista.appendChild(div);
-  });
-  const total = FILTRADOS.length;
-  document.getElementById('contadorFiltro').textContent = total!==TODOS.length ? total+' encontrados' : '';
-  const btn = document.getElementById('verMais');
-  if(MOSTRADOS < total){ btn.style.display='block'; btn.textContent = `Ver mais ${Math.min(POR_PAGINA, total-MOSTRADOS)} ▼ (${MOSTRADOS}/${total})`; }
-  else btn.style.display='none';
-  if(total===0) lista.innerHTML='<p style="color:#71717a;text-align:center;padding:20px">Nenhum guia encontrado para essa busca.</p>';
+async function load(){
+  let text=null, used='';
+  for(const url of RAW_URLS){
+    try{
+      const r=await fetch(url+'?v='+Date.now(),{cache:'no-store'});
+      if(r.ok){text=await r.text(); used=url; break;}
+    }catch(e){}
+  }
+  if(!text){document.getElementById('status').innerText='Não consegui ler legendas.txt. Suba legendas.txt na raiz do repo.'; return;}
+  const produtos=parseLegendas(text);
+  document.getElementById('status').innerText=produtos.length+' guias carregados de '+used;
+  document.getElementById('grid').innerHTML=produtos.map(p=>`
+    <div class="card">
+      <div class="logo" style="font-size:10px;padding:4px 10px">FPD ⚡</div>
+      <h3>${p.titulo}</h3>
+      <small>${p.desc}</small>
+      <small>${p.tags}</small>
+      <span class="price">R$ 8,90</span>
+      <div class="meta">🎵 ${p.musica} • ${p.file}</div>
+    </div>
+  `).join('');
 }
-document.getElementById('busca').addEventListener('input', e=>{
-  const termo = e.target.value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-  if(!termo){ FILTRADOS = TODOS; render(true); return; }
-  FILTRADOS = TODOS.filter(p=>{
-    const texto = (p.nome+' '+(p.promessa||'')+' '+(p.publico||'')+' '+(p.tipo||'')).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-    return texto.includes(termo);
-  });
-  render(true);
-});
-document.getElementById('verMais').addEventListener('click', ()=>{
-  MOSTRADOS += POR_PAGINA;
-  render(false);
-});
-carregar();
+load();
 </script>
 </body>
 </html>
