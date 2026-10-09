@@ -352,7 +352,7 @@ def _ffmpeg(saida: str, quadros, duracao: float, musica: str | None) -> subproce
            "-r", str(FPS), "-i", "-"]
     if musica:  # repete se o mp3 for curto; volume 0.15; corta em 0-8 s; some no fim
         cmd += ["-stream_loop", "-1", "-i", musica, "-map", "0:v", "-map", "1:a",
-                "-af", f"volume={VOLUME},afade=t=out:st={max(0.0, duracao - 0.6):.2f}:d=0.6", "-c:a", "aac", "-b:a", "128k"]
+                "-af", f"volume={VOLUME},afade=t=out:st={max(0.0, duracao - 0.6):.2f}:d=0.6", "-c:a", "aac", "-b:a", "128k", "-ar", "44100"]
     cmd += ["-t", f"{duracao:g}", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "medium", "-crf", "20",
             "-movflags", "+faststart", saida]
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE)

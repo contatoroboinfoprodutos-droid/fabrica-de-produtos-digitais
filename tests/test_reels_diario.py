@@ -149,14 +149,14 @@ class Meta(unittest.TestCase):
         resp = [Resp(500), Resp(502), Resp(200, {"ok": 1})]
         self.assertEqual(rp.com_tentativas(lambda: resp.pop(0)).status_code, 200)
 
-    def test_instagram_container_publica_e_cai_para_5_hashtags_se_recusado(self):
+    def test_instagram_envia_o_arquivo_primeiro_e_cai_para_5_hashtags_se_recusado(self):
         chamadas = []
 
         def post(url, data=None, **k):
-            chamadas.append((url, dict(data or {})))
+            chamadas.append((url, {} if "rupload" in url else dict(data or {})))
             if url.endswith("/media") and len(re.findall(r"#\w+", data["caption"])) > 5:
                 return Resp(400, {}, "Error: too many hashtags")
-            return Resp(200, {"id": "C1"})
+            return Resp(200, {"id": "C1", "uri": "https://rupload/x"})
         leg = "Texto\n\n#a #b #c #d #e #f #g"
         with mock.patch.object(rp.requests, "post", side_effect=post), \
                 mock.patch.object(rp.requests, "get", return_value=Resp(200, {"status_code": "FINISHED"})):
@@ -164,25 +164,35 @@ class Meta(unittest.TestCase):
         self.assertEqual(r, {"id": "C1"})
         medias = [d for u, d in chamadas if u.endswith("/media")]
         self.assertEqual(medias[0]["media_type"], "REELS")
-        self.assertEqual(medias[0]["video_url"], "https://cdn/v.mp4")
+        self.assertEqual(medias[0]["upload_type"], "resumable")       # 1ª tentativa: arquivo, sem URL de terceiros
+        self.assertNotIn("video_url", medias[0])
         self.assertEqual(len(re.findall(r"#\w+", medias[-1]["caption"])), 5)
+        self.assertIn("https://rupload/x", [u for u, _ in chamadas])
 
-    def test_instagram_sem_url_usa_upload_resumivel(self):
-        urls = []
+    def test_se_o_upload_do_arquivo_falha_tenta_video_url_e_busca_a_url_so_se_precisar(self):
+        medias = []
 
-        def post(url, data=None, headers=None, **k):
-            urls.append(url)
-            return Resp(200, {"id": "C1", "uri": "https://rupload/x"})
+        def post(url, data=None, **k):
+            if url.endswith("/media"):
+                medias.append(dict(data))
+            return Resp(200, {"id": "C%d" % len(medias)})
+        estados = iter([{"status_code": "ERROR", "status": "Error 2207026"}, {"status_code": "FINISHED"}])
+        busca = mock.Mock(return_value="https://cdn/v.mp4")
         with mock.patch.object(rp.requests, "post", side_effect=post), \
-                mock.patch.object(rp.requests, "get", return_value=Resp(200, {"status_code": "FINISHED"})):
-            rp.publicar_instagram(self.arq.name, None, "x", "T", "IG")
-        self.assertIn("https://rupload/x", urls)
+                mock.patch.object(rp.requests, "get", side_effect=lambda *a, **k: Resp(200, next(estados))):
+            r = rp.publicar_instagram(self.arq.name, busca, "x", "T", "IG")
+        self.assertEqual(r, {"id": "C2"})
+        self.assertEqual(medias[1]["video_url"], "https://cdn/v.mp4")
+        busca.assert_called_once()
 
-    def test_instagram_erro_de_processamento_levanta(self):
+    def test_erro_final_traz_o_motivo_dos_dois_modos(self):
         with mock.patch.object(rp.requests, "post", return_value=Resp(200, {"id": "C1"})), \
-                mock.patch.object(rp.requests, "get", return_value=Resp(200, {"status_code": "ERROR"})):
-            with self.assertRaises(rp.ErroMeta):
+                mock.patch.object(rp.requests, "get", return_value=Resp(200, {"status_code": "ERROR", "status": "Error 2207026"})):
+            with self.assertRaises(rp.ErroMeta) as c:
                 rp.publicar_instagram(self.arq.name, "https://cdn/v.mp4", "x", "T", "IG")
+        self.assertIn("upload do arquivo", str(c.exception))
+        self.assertIn("video_url", str(c.exception))
+        self.assertIn("2207026", str(c.exception))
 
     def test_facebook_tres_fases(self):
         fases = []
