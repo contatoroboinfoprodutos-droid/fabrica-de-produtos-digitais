@@ -70,6 +70,7 @@ jobs:
           GEMINI_MODEL: ${{ env.GEMINI_ESCOLHIDO || secrets.GEMINI_MODEL }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
+          GH_PAT_VARIABLES: ${{ secrets.GH_PAT_VARIABLES }}  # opcional: deixa o healer atualizar a Variable
           MODEL: ${{ secrets.MODEL }}
           PRODUTO_TOPICO: ${{ secrets.PRODUTO_TOPICO }}
           IMAGEM_PADRAO_URL: ${{ secrets.IMAGEM_PADRAO_URL }}

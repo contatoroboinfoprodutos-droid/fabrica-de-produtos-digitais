@@ -27,7 +27,7 @@ class Publico(Base):
         self.assertIn("Link na bio: https://fabricadeprodutosdigitais.github.io/fabrica-de-produtos-digitais/", ig)
         for legenda in (fb, ig):
             linha = next(l for l in legenda.splitlines() if l.startswith("#"))   # (a nota [TRAVAS] vem depois)
-            self.assertEqual(len(re.findall(r"#\w+", linha)), 7)               # ampla (2) + tema (3) + nicho (2)
+            self.assertEqual(len(re.findall(r"#\w+", linha)), 20)              # amplas (8) + tema (7) + nicho (5)
 
     def test_payloads_reais_nao_tem_nenhum_campo_de_segmentacao(self):
         _, tools = carregar_lowticket("true")

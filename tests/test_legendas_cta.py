@@ -2,6 +2,7 @@
 import importlib.util
 import os
 import tempfile
+import re
 import unittest
 
 from fabrica_produtos import config_fabrica as cfg, travas
@@ -38,25 +39,62 @@ class Legenda(unittest.TestCase):
         self.assertNotIn("github.io", fb)
         for h in ("#produtividade", "#organizacao", "#rotina", "#foco", "#gestaodotempo", "#habitos", "#disciplina"):
             self.assertIn(h, ig)
+        self.assertEqual(len(re.findall(r"#\w+", ig.splitlines()[-1])), 20)
         self.assertNotIn("#qualquer", ig)                     # hashtags do modelo no fim são trocadas
-        self.assertTrue(ig.rstrip().splitlines()[-1].startswith("#produtividade #organizacao"))  # hashtags por último
+        self.assertTrue(ig.rstrip().splitlines()[-1].startswith("#produtividade #foco #gestaodotempo"))  # hashtags por último
 
     def test_hashtags_seguem_o_tema_do_produto(self):
-        self.assertIn("#marmita", travas.hashtags_em_camadas(prod("Receitas Fit e Marmitas")))
+        self.assertIn("#marmitafit", travas.hashtags_em_camadas(prod("Receitas Fit e Marmitas")))
         self.assertNotIn("#rendaextra", travas.hashtags_em_camadas(prod("Receitas Fit e Marmitas")))
         self.assertIn("#financaspessoais", travas.hashtags_em_camadas(prod("Finanças Pessoais do Zero")))
         self.assertIn("#rendaextra", travas.hashtags_em_camadas(prod("Renda extra com habilidades online")))
         self.assertIn("#produtividade", travas.hashtags_em_camadas(None, "dica do dia"))
-        todas = " ".join(" ".join(a + b + c) for a, b, c in travas.HASHTAGS_CAMADAS.values())
-        self.assertEqual(travas.encontrar_termos(todas), [])
+        todas = " ".join(" ".join(t["prioridade"] + t["tema"] + t["nicho"]) for t in travas.HASHTAGS_TEMAS.values())
+        self.assertEqual(travas.encontrar_termos(todas + " " + " ".join(travas.HASHTAGS_AMPLAS)), [])
+
+    def test_20_hashtags_unicas_por_tema_e_amplas_iguais(self):
+        amplas = None
+        for tema in travas.HASHTAGS_TEMAS:
+            lista = travas.lista_de_hashtags(None, {"receitas": "marmita", "financas": "financas", "renda": "renda extra",
+                                                    "casa": "organizacao da casa", "produtividade": "foco"}[tema])
+            self.assertEqual(len(lista), 20, tema)
+            self.assertEqual(len(set(lista)), 20, tema)
+            self.assertLessEqual(len(lista), travas.MAX_HASHTAGS)
+            fixas = [h for h in lista if h in travas.HASHTAGS_AMPLAS]
+            self.assertEqual(len(fixas), 8, tema)
+            amplas = amplas or fixas
+            self.assertEqual(sorted(fixas), sorted(amplas))
+
+    def test_marmita_mantem_as_5_boas_nas_primeiras_posicoes(self):
+        lista = travas.lista_de_hashtags(prod("Receitas Fit e Marmitas"), "marmita")
+        self.assertEqual(lista[:5], ["#marmitafit", "#alimentacaosaudavel", "#receitasfit", "#marmitas", "#cardapiosemanal"])
+        for h in ("#comidasaudavel", "#reeducacaoalimentar", "#nutricao", "#comidafit", "#marmitafitness",
+                  "#marmitando", "#receitafitfacil", "#dicas", "#lifestyle"):
+            self.assertIn(h, lista)
+
+    def test_reduzir_para_5_mantem_as_principais_e_o_cta(self):
+        ig = travas.finalizar_para_rede(prod("Receitas Fit e Marmitas"), "Marmita da semana.", "instagram")
+        curta = travas.reduzir_hashtags(ig, 5)
+        self.assertEqual(curta.splitlines()[-1], "#marmitafit #alimentacaosaudavel #receitasfit #marmitas #cardapiosemanal")
+        self.assertIn(IG, curta)
+
+    def test_quantidade_por_variavel_respeita_teto_25(self):
+        antigo = cfg.HASHTAGS_INSTAGRAM
+        try:
+            cfg.HASHTAGS_INSTAGRAM = 99
+            self.assertEqual(len(re.findall(r"#\w+", travas.finalizar_para_rede(prod(), "x", "instagram").splitlines()[-1])), 20)
+            cfg.HASHTAGS_INSTAGRAM = 10
+            self.assertEqual(len(re.findall(r"#\w+", travas.finalizar_para_rede(prod(), "x", "instagram").splitlines()[-1])), 10)
+        finally:
+            cfg.HASHTAGS_INSTAGRAM = antigo
 
     def test_post_de_valor_usa_o_tema_do_texto_e_nao_o_do_produto(self):
         receitas = prod("Receitas Fit e Marmitas")
         valor = travas.hashtags_em_camadas(receitas, "Escolha UMA tarefa por dia e proteja 25 minutos.", "VALOR")
         self.assertIn("#produtividade", valor)
-        self.assertNotIn("#marmita", valor)
-        self.assertIn("#marmita", travas.hashtags_em_camadas(receitas, "Texto sem tema.", "OFERTA"))
-        self.assertIn("#marmita", travas.hashtags_em_camadas(receitas, "Hoje: marmita da semana.", "VALOR"))
+        self.assertNotIn("#marmitafit", valor)
+        self.assertIn("#marmitafit", travas.hashtags_em_camadas(receitas, "Texto sem tema.", "OFERTA"))
+        self.assertIn("#marmitafit", travas.hashtags_em_camadas(receitas, "Hoje: marmita da semana.", "VALOR"))
 
     def test_nao_duplica_cta_se_o_texto_ja_tem_o_link(self):
         t = travas.finalizar_para_rede(prod(), f"Texto.\nLink na bio: {IG}", "instagram")

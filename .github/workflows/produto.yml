@@ -37,6 +37,7 @@ jobs:
       GROQ_MODEL: ${{ vars.GROQ_MODEL }}
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
+      GH_PAT_VARIABLES: ${{ secrets.GH_PAT_VARIABLES }}  # opcional: deixa o healer atualizar a Variable
       # --- Cakto (Painel Cakto > Integracoes > Cakto API > Criar chave de API) ---
       CAKTO_CLIENT_ID: ${{ secrets.CAKTO_CLIENT_ID }}
       CAKTO_CLIENT_SECRET: ${{ secrets.CAKTO_CLIENT_SECRET }}
