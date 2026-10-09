@@ -235,3 +235,8 @@ público geral), publica no Facebook (Reels da Página) e no Instagram (Reels) c
 - Música: são os mp3 livres de `assets/music` (ou da Pixabay, se houver chave). "Viral" não dá para garantir nem
   licenciar por API: use só áudio com licença livre.
 - `FABRICA_HASHTAGS_INSTAGRAM/FACEBOOK` agora são repassadas pelos workflows (antes só valiam no código).
+
+### Reels no Instagram: ordem de tentativa (PR #18)
+Na 1ª execução real o Facebook publicou e o Instagram respondeu `status ERROR` ao baixar o vídeo pela URL do Facebook.
+Agora o Instagram recebe primeiro o **arquivo** (upload resumível); se falhar, tenta `video_url`. O erro final traz o
+`status` detalhado da Meta dos dois modos. O áudio sai a 44,1 kHz.

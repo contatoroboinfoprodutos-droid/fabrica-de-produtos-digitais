@@ -196,9 +196,9 @@ def _url_do_video(vid: str, token_pagina: str, esperar=time.sleep, tentativas: i
     return None
 
 
-def publicar_instagram(video: str, video_url: str | None, legenda: str, token: str, ig_id: str,
-                       esperar=time.sleep, tentativas_status: int = 40) -> dict:
-    """Reel do Instagram. Com URL pública usa video_url; sem ela, upload resumível do arquivo."""
+def _instagram_uma_vez(video: str, video_url: str | None, legenda: str, token: str, ig_id: str, esperar,
+                       tentativas_status: int) -> dict:
+    """Um modo: com `video_url` público, ou (sem URL) upload resumível do arquivo. Levanta ErroMeta com o motivo da Meta."""
     dados = {"media_type": "REELS", "caption": legenda, "share_to_feed": "true", "access_token": token}
     resumivel = not video_url
     if resumivel:
@@ -225,17 +225,39 @@ def publicar_instagram(video: str, video_url: str | None, legenda: str, token: s
                     "Authorization": f"OAuth {token}", "offset": "0", "file_size": str(os.path.getsize(video))})
         _ok(com_tentativas(enviar), "Instagram envio do vídeo")
     for _ in range(tentativas_status):  # vídeo leva de segundos a minutos para ficar FINISHED
-        st = requests.get(_graph(cid), params={"fields": "status_code", "access_token": token}, timeout=30).json().get("status_code")
+        info = requests.get(_graph(cid), params={"fields": "status_code,status", "access_token": token}, timeout=30).json()
+        st = info.get("status_code")
         if st == "FINISHED":
             break
         if st in ("ERROR", "EXPIRED"):
-            raise ErroMeta(f"Instagram não processou o vídeo (status {st})")
+            raise ErroMeta(f"Instagram não processou o vídeo (status {st}: {info.get('status') or 'sem detalhe'})")
         esperar(8)
     else:
         raise ErroMeta("Instagram: vídeo não ficou pronto a tempo")
     p = _ok(com_tentativas(lambda: requests.post(_graph(f"{ig_id}/media_publish"), data={
         "creation_id": cid, "access_token": token}, timeout=90)), "Instagram publicação")
     return {"id": p.get("id")}
+
+
+def publicar_instagram(video: str, video_url, legenda: str, token: str, ig_id: str,
+                       esperar=time.sleep, tentativas_status: int = 40) -> dict:
+    """Reel do Instagram. 1º envia o ARQUIVO (upload resumível: não depende de URL de terceiros, que foi o que falhou
+    com 'status ERROR' na 1ª execução real); se isso falhar, tenta de novo com video_url (a URL do vídeo no Facebook;
+    pode ser uma função que a busca só se for preciso). Se os dois falharem, o erro traz o motivo dos dois."""
+    motivos = []
+    try:
+        return _instagram_uma_vez(video, None, legenda, token, ig_id, esperar, tentativas_status)
+    except (ErroMeta, requests.RequestException) as e:
+        motivos.append(f"upload do arquivo: {e}")
+    url = video_url() if callable(video_url) else video_url
+    if url:
+        try:
+            return _instagram_uma_vez(video, url, legenda, token, ig_id, esperar, tentativas_status)
+        except (ErroMeta, requests.RequestException) as e:
+            motivos.append(f"video_url: {e}")
+    else:
+        motivos.append("video_url: o Facebook não entregou a URL do vídeo")
+    raise ErroMeta(" | ".join(motivos))
 
 
 # ----------------------------------------------------------------------------
@@ -302,7 +324,9 @@ def executar(dry_run: bool = True, so: str | None = None, pasta: str = "reels", 
             erros.append(f"Facebook: {e}")
     if token_pagina and not registro.get("instagram"):
         try:
-            r = publicar_ig(video, video_url, legendas["instagram"], token_pagina, ig_id)
+            fb_id = registro.get("facebook")
+            r = publicar_ig(video, video_url or (lambda: _url_do_video(fb_id, token_pagina)),
+                            legendas["instagram"], token_pagina, ig_id)
             registro["instagram"] = r["id"]
             _log(f"Instagram: Reel publicado ({r['id']})")
         except Exception as e:
