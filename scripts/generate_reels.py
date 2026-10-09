@@ -167,13 +167,19 @@ def mp3_valido(arq: str) -> bool:
 
 
 def diagnostico_musica(p: dict, pasta: str | None = None) -> tuple[str | None, str]:
-    """(caminho do mp3, motivo). Caminho None = vídeo sem áudio; o motivo diz por quê."""
-    arq = os.path.join(pasta or PASTA_MUSICA, escolher_musica(titulo_de(p), categoria_de(p)) + ".mp3")
-    if not os.path.isfile(arq):
-        return None, f"arquivo ausente ({os.path.basename(arq)})"
-    if not mp3_valido(arq):
-        return None, f"arquivo corrompido ({os.path.basename(arq)})"
-    return arq, ""
+    """(caminho do mp3, motivo). Se o mp3 da categoria faltar ou estiver corrompido, usa outro mp3 válido da pasta
+    (e diz qual). Caminho None = nenhum mp3 válido: vídeo sem áudio."""
+    pasta = pasta or PASTA_MUSICA
+    escolhida = escolher_musica(titulo_de(p), categoria_de(p))
+    arq = os.path.join(pasta, escolhida + ".mp3")
+    if mp3_valido(arq):
+        return arq, ""
+    problema = f"arquivo {'corrompido' if os.path.isfile(arq) else 'ausente'} ({escolhida}.mp3)"
+    for outro in ("lofi", "happy", "corporate"):
+        alt = os.path.join(pasta, outro + ".mp3")
+        if outro != escolhida and mp3_valido(alt):
+            return alt, f"{problema}; usando {outro}.mp3 no lugar"
+    return None, problema
 
 
 def musica_de(p: dict, pasta: str | None = None) -> str | None:
@@ -404,8 +410,8 @@ def main(argv=None) -> int:
         try:
             r = gerar_video(p, destino)
             print(f"  ok: {destino}")
-            print(f"  Música usada: {os.path.basename(r['musica'])} ({VOLUME})" if r["musica"]
-                  else f"  Sem música: {r['motivo']}")
+            print(f"  Música usada: {os.path.basename(r['musica'])} ({VOLUME})" + (f" - {r['motivo']}" if r["motivo"] else "")
+                  if r["musica"] else f"  Sem música: {r['motivo']}")
             legendas.append(f"=== {nome}.mp4 ===\n{legenda_de(p)}\n")
         except Exception as e:  # um produto com erro não derruba os outros
             falhas += 1

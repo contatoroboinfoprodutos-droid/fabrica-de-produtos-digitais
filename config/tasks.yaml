@@ -19,9 +19,10 @@ criar_roteiro_e_legenda:
     Com base no planejamento (use o NOME e o PRECO definidos em '### PRODUTO', sem alterá-los), crie:
     1. Um roteiro de áudio/locução curto (até 15 segundos) apresentando o produto e o preço.
     2. Sugestões de legendas intuitivas e dinâmicas que aparecem na tela acompanhando o áudio.
-    3. Uma versão curta e pronta para publicação (2-3 frases + hashtags) que sirva como legenda de
-       Instagram e como post de Facebook. Mencione nome e preço, e termine com a chamada
-       "Link na bio" (não invente links nem cupons).
+    3. Uma versão curta e pronta para publicação (2-3 frases) que sirva como legenda de
+       Instagram e como post de Facebook. Mencione nome e preço. NÃO escreva hashtags nem links
+       (não invente links nem cupons): o sistema acrescenta, em código, as hashtags em 3 camadas
+       (amplas, do tema e de nicho) e a chamada de cada rede (link da bio no Instagram, bit.ly no Facebook).
     Separe claramente com os cabeçalhos '### ROTEIRO', '### LEGENDA_TELA' e '### TEXTO_PUBLICACAO'.
   expected_output: >
     Roteiro estruturado em blocos (Tempo, Áudio/Locução, Texto na Tela), seguido das seções

@@ -40,6 +40,10 @@ TIPOS_ATIVOS = [t.strip().lower() for t in (os.getenv("FABRICA_TIPOS", "").strip
 MIN_CONTEUDOS = 3
 MAX_CONTEUDOS = 5
 
+# --- Links de chamada (CTA) das legendas: um por rede. O Instagram não abre link na legenda, mas o texto mostra o endereço da bio. ---
+LINK_BIO_INSTAGRAM = os.getenv("LINK_BIO_INSTAGRAM", "").strip() or "https://fabricadeprodutosdigitais.github.io/fabrica-de-produtos-digitais/"
+LINK_FACEBOOK = os.getenv("LINK_FACEBOOK", "").strip() or "bit.ly/4ibGb7a"
+
 # --- Plataformas onde o registrador atua ---
 PLATAFORMAS_ALVO = [p.strip().lower() for p in
                     (os.getenv("FABRICA_PLATAFORMAS", "").strip() or "cakto").split(",")

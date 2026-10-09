@@ -52,9 +52,13 @@ class Lowticket(Base):
                                    "**Guia** por R$ 27,00 com a primeira venda! https://SEU-LINK-DE-CHECKOUT")
         self.assertIn("[DRY_RUN]", r)
         self.assertIn(LINK, r)
-        legenda = r.split("Legenda:\n")[1].split("\n[TRAVAS]")[0]  # a nota de auditoria cita o termo removido
+        legenda = r.split("Legenda Facebook:\n")[1].split("\n[TRAVAS]")[0]  # a nota de auditoria cita o termo removido
         self.assertNotIn("SEU-LINK", legenda)
         self.assertNotIn("primeira venda", legenda)
+        fb, ig = legenda.split("Legenda Instagram:\n")           # uma legenda por rede, com o CTA de cada canal
+        self.assertIn("bit.ly/4ibGb7a", fb)
+        self.assertIn("fabricadeprodutosdigitais.github.io/fabrica-de-produtos-digitais/", ig)
+        self.assertIn("#produtividade", fb + ig)
         self.assertIn("[TRAVAS]", r)
         self.assertNotIn("BLOQUEADA", r)
 

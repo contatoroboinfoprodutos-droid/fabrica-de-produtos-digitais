@@ -182,3 +182,12 @@ não existir, o script avisa e pula. O jeito garantido é commitar os 3 mp3 em `
 Música dos Reels, jeito garantido: coloque `happy.mp3`, `lofi.mp3` e `corporate.mp3` em `assets/music/` e faça commit (mp3 não é ignorado).
 O gerador escolhe pelo título (receita/marmita/fit/comida = happy; finanças/dinheiro/produtividade/renda/investimento = corporate; resto = lofi, ou a
 categoria do produto) e mixa a 0,15. O resumo da execução diz, por vídeo, "Música usada: happy.mp3 (0.15)" ou "Sem música: arquivo ausente/corrompido".
+
+## Legendas por rede: hashtags em 3 camadas e CTA
+
+`travas.finalizar_para_rede` (em código, não pelo modelo) troca as hashtags do fim da legenda por 3 camadas do tema do produto
+(amplas, do tema e de nicho) e acrescenta o CTA do canal: Instagram `Link na bio: <LINK_BIO_INSTAGRAM>`, Facebook `Veja todos os guias: <LINK_FACEBOOK>`.
+Os dois links são Variables/Secrets opcionais (`LINK_BIO_INSTAGRAM`, `LINK_FACEBOOK`); os padrões são o site do GitHub Pages e `bit.ly/4ibGb7a`.
+Esses dois links são liberados na trava de links; qualquer outro link inventado continua sendo trocado pelo link do catálogo.
+`#rendaextra` só entra quando o produto é de renda extra. Os agentes são instruídos a NÃO escrever hashtags nem links.
+Reels: se o mp3 da categoria falta ou está corrompido, o gerador usa outro mp3 válido de `assets/music/` e registra no log.
