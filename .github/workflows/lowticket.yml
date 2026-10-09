@@ -19,6 +19,7 @@ jobs:
       GROQ_MODEL: ${{ vars.GROQ_MODEL }}
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
+      GH_PAT_VARIABLES: ${{ secrets.GH_PAT_VARIABLES }}  # opcional: deixa o healer atualizar a Variable
       LT_DRY_RUN: ${{ vars.LT_DRY_RUN || secrets.LT_DRY_RUN || 'true' }}
       LT_IG_USER_ID: ${{ secrets.LT_IG_USER_ID }}
       LT_IG_ACCESS_TOKEN: ${{ secrets.LT_IG_ACCESS_TOKEN }}

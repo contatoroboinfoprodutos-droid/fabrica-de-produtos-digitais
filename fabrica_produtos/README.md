@@ -201,3 +201,22 @@ Reels: se o mp3 da categoria falta ou está corrompido, o gerador usa outro mp3 
   e só conta o que foi criado no dia: falhou, tenta de novo no próximo horário.
 - `LT_DRY_RUN` não influi na criação de produto (só nas postagens do Low Ticket). `FABRICA_DRY_RUN`/`FABRICA_PAUSADA` sim.
 - Publicação orgânica na Meta não tem campo de público: é aberta a todos. O robô nunca envia segmentação (testado) e o dry-run mostra "Público: para todos os públicos".
+
+## 20 hashtags, modelo gratuito que se cura e retry por rede (PR #15)
+
+- **20 hashtags por legenda, em código** (`travas.finalizar_para_rede`): 8 amplas fixas (`#dicas #rotina #organizacao #saude
+  #bemestar #vidasaudavel #motivacao #lifestyle`) + 7 do tema + 5 do nicho; únicas, sem termo proibido, teto 25.
+  Temas: receitas, finanças, renda, casa, produtividade. As 5 mais fortes do tema vêm primeiro (na Marmita:
+  `#marmitafit #alimentacaosaudavel #receitasfit #marmitas #cardapiosemanal`). Quantidade por rede nas Variables
+  `FABRICA_HASHTAGS_INSTAGRAM` / `FABRICA_HASHTAGS_FACEBOOK` (padrão 20, máx. 25).
+- **Atenção, Instagram:** o Instagram anunciou limite de 5 hashtags por legenda (implantação gradual). Se a API recusar por
+  excesso de hashtags, o robô repete a publicação só com as 5 primeiras. Se não recusar, o aplicativo ainda pode ignorar as
+  extras: reduza `FABRICA_HASHTAGS_INSTAGRAM=5` se notar isso.
+- **`agents/model_healer.py`**: se o modelo de `OPENROUTER_MODEL` der 404 ("unavailable for free"), troca na hora por um
+  modelo `:free` com preço zero (lista pública do OpenRouter, ordem de preferência, teste de 1 token, cache de 6 h em
+  `/tmp/free_models.json`), loga `⚠️ Variable desatualizada, auto-trocado para X`, e cai para Gemini/Groq se nada gratuito
+  responder. Nunca escolhe modelo pago. A Variable só é atualizada se existir o secret opcional `GH_PAT_VARIABLES`
+  (token com permissão de *Variables: write*); o `GITHUB_TOKEN` padrão não pode gravar Variables.
+- **Retry por rede**: Facebook e Instagram repetem até 3x (4 s, 8 s) em erro 5xx/429/rede; só a rede que falhou é repetida.
+- **Rodízio de produtos**: o nicho de cada rodada pula os que apareceram nos últimos 5 produtos; novos nichos
+  (finanças domésticas, organização da casa, renda extra com habilidades e serviços online).
