@@ -1,62 +1,93 @@
-name: Gerar Reels (manual)
+name: Reels (publicacao diaria)
 
 on:
+  schedule:
+    - cron: "0 18 * * *"   # 15:00 Brasilia, todo dia
   workflow_dispatch:
     inputs:
-      max:
-        description: "Quantos produtos (os mais novos primeiro). 0 = todos"
-        default: "10"
+      dry_run:
+        description: "true = so mostra produto e legendas (nao gera video, nao publica). false = publica de verdade"
+        default: "true"
       only:
-        description: "Opcional: so um produto (slug, ex.: guia-pratico-de-produtividade-e-organizacao-da-rotina)"
+        description: "Opcional: id de um produto (ex.: p20261005-1)"
         required: false
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: reels
+  cancel-in-progress: false
 
 jobs:
   reels:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
     env:
-      REELS_MAX: ${{ github.event.inputs.max }}
+      # Agendado = publica de verdade, a menos que a Variable REELS_DRY_RUN=true. Manual = vale o campo dry_run.
+      REELS_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run || vars.REELS_DRY_RUN || 'false' }}
       REELS_ONLY: ${{ github.event.inputs.only }}
+      # IA (so o roteiro de produto novo usa; o model_healer troca o modelo gratis que sair do ar)
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      GROQ_MODEL: ${{ vars.GROQ_MODEL }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
+      GH_PAT_VARIABLES: ${{ secrets.GH_PAT_VARIABLES }}
+      FABRICA_HASHTAGS_INSTAGRAM: ${{ vars.FABRICA_HASHTAGS_INSTAGRAM || secrets.FABRICA_HASHTAGS_INSTAGRAM || '20' }}
+      FABRICA_HASHTAGS_FACEBOOK: ${{ vars.FABRICA_HASHTAGS_FACEBOOK || secrets.FABRICA_HASHTAGS_FACEBOOK || '20' }}
+      # Meta
+      META_LONG_LIVED_TOKEN: ${{ secrets.META_LONG_LIVED_TOKEN }}
+      FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+      INSTAGRAM_ACCOUNT_ID: ${{ secrets.INSTAGRAM_ACCOUNT_ID }}
+      # Legendas (as mesmas Variables dos outros robos)
+      LINK_BIO_INSTAGRAM: ${{ vars.LINK_BIO_INSTAGRAM || secrets.LINK_BIO_INSTAGRAM }}
+      LINK_FACEBOOK: ${{ vars.LINK_FACEBOOK || secrets.LINK_FACEBOOK }}
+      REELS_LINK: ${{ vars.REELS_LINK }}
       PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
-      REELS_LINK: ${{ vars.REELS_LINK }}   # opcional; padrao bit.ly/4rWbLt5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Instala ffmpeg e fonte
+      - name: Instala ffmpeg, fonte e bibliotecas
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq ffmpeg fonts-dejavu-core
-      - name: Baixa musicas (opcional; sem chave ou sem resultado, segue sem musica)
-        run: |
           pip install requests pillow numpy
-          python scripts/fetch_music.py || echo "usando mp3 manual de assets/music/"
+      - name: Musicas livres (opcional; sem chave segue com os mp3 de assets/music)
+        run: python scripts/fetch_music.py || echo "usando mp3 de assets/music/"
 
-      - name: Musicas encontradas
+      - name: Roteiro do produto novo (IA gratuita com model_healer; falha aqui nao impede o Reel)
+        continue-on-error: true
         run: |
-          {
-            echo "### Musicas em assets/music"
-            ls -1 assets/music/*.mp3 2>/dev/null | sed 's/^/- /' || true
-            [ -n "$(ls assets/music/*.mp3 2>/dev/null)" ] || echo "- nenhuma: os videos saem SEM audio (coloque happy.mp3, lofi.mp3 e corporate.mp3)"
-          } | tee -a "$GITHUB_STEP_SUMMARY"
+          pip install -q -r fabrica_produtos/requirements_fabrica.txt
+          python -m fabrica_produtos reels
 
-      - name: Gera os Reels
+      - name: Gera e publica 1 Reel (Facebook + Instagram, retry 3x por rede)
         run: |
-          ARGS="--max ${REELS_MAX:-10}"
-          if [ -n "$REELS_ONLY" ]; then ARGS="$ARGS --only $REELS_ONLY"; fi
-          python scripts/generate_reels.py $ARGS | tee -a "$GITHUB_STEP_SUMMARY"
+          ARGS=""
+          if [ -n "$REELS_ONLY" ]; then ARGS="--so $REELS_ONLY"; fi
+          python -m fabrica_produtos.reels_publicar $ARGS | tee -a "$GITHUB_STEP_SUMMARY"
+          exit "${PIPESTATUS[0]}"
 
-      - name: Reels e legendas (baixe na pagina da execucao)
+      - name: Guarda o registro de Reels publicados
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add catalogo
+          if git diff --cached --quiet; then echo "Sem mudancas"; exit 0; fi
+          git commit -m "Atualiza Reels publicados"
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin "HEAD:$GITHUB_REF_NAME"
+
+      - name: Video e legendas (baixe na pagina da execucao)
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: reels
-          path: |
-            reels/*.mp4
-            reels/legendas.txt
-          if-no-files-found: warn
-          retention-days: 14
+          path: reels/*.mp4
+          if-no-files-found: ignore
+          retention-days: 7
