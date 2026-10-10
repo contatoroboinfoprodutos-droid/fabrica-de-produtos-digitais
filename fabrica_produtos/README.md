@@ -240,3 +240,11 @@ público geral), publica no Facebook (Reels da Página) e no Instagram (Reels) c
 Na 1ª execução real o Facebook publicou e o Instagram respondeu `status ERROR` ao baixar o vídeo pela URL do Facebook.
 Agora o Instagram recebe primeiro o **arquivo** (upload resumível); se falhar, tenta `video_url`. O erro final traz o
 `status` detalhado da Meta dos dois modos. O áudio sai a 44,1 kHz.
+
+## Criação agendada em lote (PR #19)
+
+`produto.yml` roda às 09:00 UTC (06:00 Brasília) com `python -m fabrica_produtos criar --lote`: cria produtos em
+sequência até `FABRICA_MAX_POR_DIA` (rodízio de nichos pelo catálogo; os últimos 5 não se repetem). Os crons de 12:00 e
+18:00 Brasília continuam como rede de segurança: completam só o que faltou e, com o teto atingido, saem verdes sem criar.
+Clique manual (`workflow_dispatch`) continua criando **1** produto por vez. Uma rodada que falha não derruba as outras
+(tentativas extras limitadas) e o lote para ao fim do orçamento de tempo (`FABRICA_LOTE_MINUTOS`, padrão 26 min).
