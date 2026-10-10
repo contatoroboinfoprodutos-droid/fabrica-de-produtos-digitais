@@ -174,12 +174,6 @@ class Drive:
         self._liberar_link(arquivo_id)
         return f"https://drive.google.com/file/d/{arquivo_id}/view"
 
-    def publicar_imagem(self, caminho: str, nome: str) -> str:
-        """Envia a capa (PNG), libera leitura por link e devolve uma URL que serve a imagem direto (para <img>/Cakto)."""
-        arquivo_id = self._achar(nome) or self._enviar(caminho, nome, "image/png")
-        self._liberar_link(arquivo_id)
-        return f"https://drive.google.com/thumbnail?id={arquivo_id}&sz=w1280"
-
     # -- sondagem (somente leitura) --
     def sondar(self) -> list[str]:
         linhas = [f"## {self.nome}"]

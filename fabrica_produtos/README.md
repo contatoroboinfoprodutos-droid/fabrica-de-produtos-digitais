@@ -263,3 +263,13 @@ Os produtos apareciam "Sem imagem" porque o robô nunca enviava capa (e nem gera
   produtos do catálogo na Cakto, envia a capa dos que estão sem imagem e ativa os que só esperavam por ela. É o que
   corrige os 5 produtos atuais.
 - Nada disso foi testado contra a Cakto real; o resultado aparece no resumo da primeira execução.
+
+### Correção após a 1ª execução real (PR #21)
+- A Cakto devolveu 400 "obrigatório" para um `PUT` só com `image`: agora todo `PUT` de capa leva `name`, `description` e
+  `price` do catálogo junto com `image` (e o multipart também).
+- A capa NÃO usa mais o Drive (a conta de serviço não tem cota no Meu Drive): a URL é a do GitHub raw
+  `https://raw.githubusercontent.com/<repo>/main/docs/capas/{id}.png`, só enviada se já responder como imagem.
+  O PDF de entrega continua dependendo do Drive.
+- `CAKTO_EXIGE_IMAGEM` agora vale `false` por padrão (produto é ativado mesmo sem capa) até a imagem ser confirmada na
+  Cakto; `true` volta a exigir a capa antes de ativar.
+- A ação `capas` varre a Cakto, acha produtos sem `image` e reenvia com o payload completo (idempotente).
