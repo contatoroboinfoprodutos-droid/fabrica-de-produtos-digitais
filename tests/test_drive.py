@@ -161,7 +161,7 @@ class FakeCakto:
     def buscar_por_nome(self, nome):
         return None
 
-    def criar_produto(self, p, pdf, url_entrega=None):
+    def criar_produto(self, p, pdf, url_entrega=None, **kw):
         self.recebido = url_entrega
         ativo = bool(url_entrega)
         return {"id": "u1", "status": "active" if ativo else "waiting_config", "ativo": ativo,
@@ -229,21 +229,24 @@ class CaktoEntrega(unittest.TestCase):
         p.start()
         self.addCleanup(p.stop)
 
-    def test_produto_existente_em_waiting_config_recebe_entrega_e_ativa(self):
+    def test_produto_existente_em_waiting_config_recebe_entrega_capa_e_ativa(self):
         nome = produto_bom()["nome"]
         c, srv = cliente({
             ("GET", "/public_api/products/"): Resp(200, {"count": 1, "next": None, "results": [
                 {"id": "u1", "name": nome}]}),
-            ("GET", "/public_api/products/u1/"): [Resp(200, produto_api(nome, status="waiting_config", pid="u1")),
-                                                  Resp(200, produto_api(nome, status="active", pid="u1"))],
+            ("GET", "/public_api/products/u1/"): [
+                Resp(200, produto_api(nome, status="waiting_config", pid="u1")),                      # busca por nome
+                Resp(200, {**produto_api(nome, status="waiting_config", pid="u1"), "image": "https://c/1.png"}),
+                Resp(200, {**produto_api(nome, status="active", pid="u1"), "image": "https://c/1.png"})],
             ("PUT", "/public_api/products/u1/"): Resp(200, {}),
         })
         self.usar(srv)
-        r = c.criar_produto(produto_bom(), "x.pdf", "https://drive.google.com/file/d/A/view")
-        put = next(ch for ch in srv.chamadas if ch[0] == "PUT")
-        self.assertEqual(put[2]["json"], {"contentDeliveries": ["emailAccess"],
-                                          "emailAccessLink": "https://drive.google.com/file/d/A/view",
-                                          "status": "active"})
+        r = c.criar_produto(produto_bom(), "x.pdf", "https://drive.google.com/file/d/A/view",
+                            urls_imagem=["https://c/1.png"])
+        puts = [ch[2]["json"] for ch in srv.chamadas if ch[0] == "PUT"]
+        self.assertEqual(puts, [{"contentDeliveries": ["emailAccess"],
+                                 "emailAccessLink": "https://drive.google.com/file/d/A/view"},
+                                {"image": "https://c/1.png"}, {"status": "active"}])
         self.assertTrue(r["ativo"] and r["existente"])
         self.assertEqual(r["link"], "https://pay.cakto.com.br/77BcHrY")
 

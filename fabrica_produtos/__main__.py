@@ -6,6 +6,7 @@
   python -m fabrica_produtos sondar                relatório (somente leitura) do que as APIs aceitam
   python -m fabrica_produtos status                lista o catálogo
   python -m fabrica_produtos hub                   gera docs/link-na-bio.html a partir do catálogo
+  python -m fabrica_produtos capas                 gera e envia a capa dos produtos que estão 'Sem imagem' na Cakto
   python -m fabrica_produtos reels                 gera o roteiro de Reels dos produtos que ainda não têm
 """
 import argparse
@@ -81,6 +82,13 @@ def cmd_verificar() -> int:
     from . import registrador
 
     _saida("### Verificação de links\n" + "\n".join(f"- {l}" for l in registrador.verificar_links()))
+    return 0
+
+
+def cmd_capas() -> int:
+    from . import registrador
+
+    _saida("### Capas na Cakto\n" + "\n".join(f"- {l}" for l in registrador.enviar_capas()))
     return 0
 
 
@@ -169,7 +177,7 @@ def main(argv=None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     ap = argparse.ArgumentParser(prog="fabrica_produtos")
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for nome in ("verificar", "sondar", "status", "marcas", "hub", "reels"):
+    for nome in ("verificar", "sondar", "status", "marcas", "hub", "reels", "capas"):
         sub.add_parser(nome)
     c = sub.add_parser("criar")
     c.add_argument("--lote", action="store_true", help="repete até o teto diário (usado pelo agendamento)")
@@ -181,7 +189,7 @@ def main(argv=None) -> int:
     d.add_argument("--link", required=True)
     d.add_argument("--plataforma", default="")
     args = ap.parse_args(argv)
-    return {"criar": lambda: cmd_criar(args.lote), "verificar": cmd_verificar, "sondar": cmd_sondar, "status": cmd_status, "marcas": cmd_marcas, "hub": cmd_hub, "reels": cmd_reels, "guardiao": lambda: cmd_guardiao(args),
+    return {"criar": lambda: cmd_criar(args.lote), "verificar": cmd_verificar, "sondar": cmd_sondar, "status": cmd_status, "marcas": cmd_marcas, "hub": cmd_hub, "reels": cmd_reels, "capas": cmd_capas, "guardiao": lambda: cmd_guardiao(args),
             "definir-link": lambda: cmd_definir_link(args)}[args.cmd]()
 
 

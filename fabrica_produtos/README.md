@@ -248,3 +248,18 @@ sequência até `FABRICA_MAX_POR_DIA` (rodízio de nichos pelo catálogo; os úl
 18:00 Brasília continuam como rede de segurança: completam só o que faltou e, com o teto atingido, saem verdes sem criar.
 Clique manual (`workflow_dispatch`) continua criando **1** produto por vez. Uma rodada que falha não derruba as outras
 (tentativas extras limitadas) e o lote para ao fim do orçamento de tempo (`FABRICA_LOTE_MINUTOS`, padrão 26 min).
+
+## Capa do produto na Cakto (PR #20)
+
+Os produtos apareciam "Sem imagem" porque o robô nunca enviava capa (e nem gerava). Agora:
+- `fabrica_produtos/capa.py` gera `docs/capas/{id}.png` (1280x720, cor/selo por assunto) em código com Pillow.
+- Segundo a documentação da Cakto, o campo é `image` e recebe **URL pública** (`PUT /public_api/products/{id}/`), não arquivo.
+  O robô hospeda a capa no Drive (e, depois do commit, usa o GitHub raw), testa se a URL responde como imagem e envia.
+  Se a Cakto recusar as URLs, tenta o PNG em multipart no mesmo campo (a documentação não confirma upload de arquivo).
+- O produto novo nasce `waiting_config` e só vira `active` **depois** que a Cakto passa a devolver `image`
+  (`CAKTO_EXIGE_IMAGEM=false` desliga essa trava). Falha de imagem: `CAKTO_IMAGEM_ERROR produto=... http=<código> ...`
+  no log e no resumo; o produto espera em `waiting_config` e o próximo `capas` tenta de novo.
+- `python -m fabrica_produtos capas` (ação `capas` no `produto.yml`, também roda em toda execução): confere os
+  produtos do catálogo na Cakto, envia a capa dos que estão sem imagem e ativa os que só esperavam por ela. É o que
+  corrige os 5 produtos atuais.
+- Nada disso foi testado contra a Cakto real; o resultado aparece no resumo da primeira execução.

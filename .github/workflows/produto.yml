@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       acao:
-        description: "criar | verificar | sondar | definir-link | status | hub | reels"
+        description: "criar | verificar | sondar | definir-link | status | hub | reels | capas"
         default: "criar"
       produto_id:
         description: "Só para definir-link: id do produto (ex.: p20261003-1)"
@@ -96,6 +96,11 @@ jobs:
         if: always()
         continue-on-error: true   # falha de IA nao pode impedir o commit do catalogo; tenta de novo na proxima
         run: python -m fabrica_produtos reels
+
+      - name: Capas na Cakto (envia a imagem dos produtos que estao Sem imagem; idempotente)
+        if: always()
+        continue-on-error: true   # erro de imagem aparece como CAKTO_IMAGEM_ERROR no resumo; nao derruba o commit do catalogo
+        run: python -m fabrica_produtos capas
 
       - name: Guarda o catalogo no repositorio
         if: always()
