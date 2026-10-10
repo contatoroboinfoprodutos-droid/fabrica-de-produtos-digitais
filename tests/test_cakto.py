@@ -46,6 +46,9 @@ def cliente(rotas):
     return plataformas.Cakto(), srv
 
 
+NOME_PADRAO = produto_bom()["nome"]
+
+
 class ClienteCakto(unittest.TestCase):
     def setUp(self):
         for k in ("CAKTO_CLIENT_ID", "CAKTO_CLIENT_SECRET", "CAKTO_SALES_PAGE"):
@@ -120,7 +123,10 @@ class ClienteCakto(unittest.TestCase):
         self.assertEqual(corpos[0]["emailAccessLink"], "https://drive.exemplo/pdf")
         self.assertEqual(corpos[0]["salesPage"], "https://loja.exemplo.com.br/p")
         puts = [kw["json"] for m, u, kw in srv.chamadas if m == "PUT"]
-        self.assertEqual(puts, [{"image": "https://x/capa.png"}, {"status": "active"}])
+        self.assertEqual(puts[0]["image"], "https://x/capa.png")
+        self.assertEqual({k: puts[0][k] for k in ("name", "price")}, {"name": NOME_PADRAO, "price": "7.00"})
+        self.assertIn("description", puts[0])
+        self.assertEqual(puts[1], {"status": "active"})
         self.assertTrue(r["ativo"])
 
     def test_criar_nao_duplica_quando_ja_existe(self):

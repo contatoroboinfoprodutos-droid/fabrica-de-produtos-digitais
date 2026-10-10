@@ -48,6 +48,15 @@ def _espera(resposta) -> float:
         return 5.0
 
 
+def dados_obrigatorios(produto: dict) -> dict:
+    """name/description/price que a Cakto exige em todo PUT (um PUT só com `image` volta 400 'obrigatório')."""
+    preco = parse_preco(produto.get("preco"))
+    d = {"name": produto["nome"], "description": produto.get("descricao_oferta") or produto.get("promessa") or produto["nome"]}
+    if preco is not None:
+        d["price"] = f"{preco:.2f}"
+    return d
+
+
 class Cakto:
     nome = "cakto"
     variaveis = ("CAKTO_CLIENT_ID", "CAKTO_CLIENT_SECRET")  # só os NOMES aparecem em relatórios
@@ -142,17 +151,17 @@ class Cakto:
         reaproveita: assim uma nova tentativa depois de um erro de rede nunca duplica o produto.
 
         Com `url_entrega` o produto recebe a entrega por e-mail (emailAccess) apontando para o PDF. Ele só vira 'active'
-        DEPOIS que a capa subir (CAKTO_EXIGE_IMAGEM=true, o padrão): nasce em 'waiting_config', recebe a imagem e então
-        é ativado. Se a imagem falhar, fica em 'waiting_config' e o erro CAKTO_IMAGEM_ERROR aparece no log; o comando
+        depois de tentar a capa. Com CAKTO_EXIGE_IMAGEM=true (padrão: false até a imagem ser confirmada na Cakto) ele só
+        é ativado se a capa subir; senão fica em 'waiting_config'. O erro CAKTO_IMAGEM_ERROR aparece no log e o comando
         `capas` tenta de novo depois. Sem `url_entrega` o produto fica em 'waiting_config' (não pode ser vendido vazio)."""
         existente = self.buscar_por_nome(produto["nome"])
         if existente:
             existente["existente"] = True
             if url_entrega and existente.get("status") == "waiting_config":
                 self._entrega(existente["id"], url_entrega)
-                existente = self.finalizar(existente["id"], urls_imagem, capa_path) | {"existente": True}
+                existente = self.finalizar(existente["id"], urls_imagem, capa_path, produto) | {"existente": True}
             elif not existente.get("imagem") and (urls_imagem or capa_path):
-                existente = self.finalizar(existente["id"], urls_imagem, capa_path) | {"existente": True}
+                existente = self.finalizar(existente["id"], urls_imagem, capa_path, produto) | {"existente": True}
             return existente
         preco = parse_preco(produto.get("preco"))
         if preco is None:
@@ -166,17 +175,20 @@ class Cakto:
         r = self._resumo(self._req("POST", "/public_api/products/", json=corpo))
         r["existente"] = False
         if url_entrega and r["id"]:
-            r = self.finalizar(r["id"], urls_imagem, capa_path) | {"existente": False}
+            r = self.finalizar(r["id"], urls_imagem, capa_path, produto) | {"existente": False}
         return r
 
-    def enviar_imagem(self, produto_id: str, urls: list[str] | None = None, capa_path: str | None = None) -> str:
-        """Põe a capa no produto. A documentação da Cakto define `image` como URL pública (PUT /products/{id}/): tenta
-        cada URL; se todas forem recusadas e houver o arquivo, tenta enviar o PNG em multipart no mesmo campo.
+    def enviar_imagem(self, produto_id: str, urls: list[str] | None = None, capa_path: str | None = None,
+                      produto: dict | None = None) -> str:
+        """Põe a capa no produto. `image` é URL pública (PUT /products/{id}/). O PUT exige name, description e price
+        (a execução real devolveu 400 'obrigatório' só com `image`): `produto` (catálogo) fornece esses dados e eles vão
+        junto em cada tentativa. Tenta cada URL; se todas forem recusadas e houver o arquivo, tenta o PNG em multipart.
         Só devolve se o produto realmente passou a ter `image`. Falha = ErroPlataforma com o código HTTP."""
         erros = []
+        base = dados_obrigatorios(produto) if produto else {}
         for url in urls or []:
             try:
-                self._req("PUT", f"/public_api/products/{produto_id}/", json={"image": url})
+                self._req("PUT", f"/public_api/products/{produto_id}/", json={**base, "image": url})
                 if self._resumo(self._req("GET", f"/public_api/products/{produto_id}/"))["imagem"]:
                     return url
                 erros.append(ErroPlataforma(f"cakto: PUT aceito mas o produto continua sem imagem ({url[:60]})", 200))
@@ -185,7 +197,7 @@ class Cakto:
         if capa_path and os.path.isfile(capa_path):
             try:
                 with open(capa_path, "rb") as f:
-                    self._req("PUT", f"/public_api/products/{produto_id}/",
+                    self._req("PUT", f"/public_api/products/{produto_id}/", data=base,
                               files={"image": (os.path.basename(capa_path), f.read(), "image/png")})
                 if self._resumo(self._req("GET", f"/public_api/products/{produto_id}/"))["imagem"]:
                     return "multipart"
@@ -203,17 +215,17 @@ class Cakto:
         self._req("PUT", f"/public_api/products/{produto_id}/", json={"status": "active"})
         return self._resumo(self._req("GET", f"/public_api/products/{produto_id}/"))
 
-    def finalizar(self, produto_id: str, urls_imagem=None, capa_path=None) -> dict:
+    def finalizar(self, produto_id: str, urls_imagem=None, capa_path=None, produto: dict | None = None) -> dict:
         """Capa primeiro, ativação depois. Falha na capa: log CAKTO_IMAGEM_ERROR e o produto fica em 'waiting_config'
-        (a menos que CAKTO_EXIGE_IMAGEM=false). Nunca levanta por causa da imagem."""
+        (só se CAKTO_EXIGE_IMAGEM=true; o padrão ativa mesmo assim). Nunca levanta por causa da imagem."""
         imagem_erro = ""
         try:
-            self.enviar_imagem(produto_id, urls_imagem, capa_path)
+            self.enviar_imagem(produto_id, urls_imagem, capa_path, produto)
         except ErroPlataforma as e:
             imagem_erro = str(e)
             logger.error("CAKTO_IMAGEM_ERROR produto=%s http=%s detalhe=%s", produto_id, e.codigo or "-", e)
             print(f"CAKTO_IMAGEM_ERROR produto={produto_id} http={e.codigo or '-'} {e}", flush=True)
-        if imagem_erro and _env("CAKTO_EXIGE_IMAGEM").lower() != "false":
+        if imagem_erro and _env("CAKTO_EXIGE_IMAGEM").lower() == "true":
             r = self._resumo(self._req("GET", f"/public_api/products/{produto_id}/"))
         else:
             r = self.ativar(produto_id)

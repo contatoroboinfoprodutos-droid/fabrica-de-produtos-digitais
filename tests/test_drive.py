@@ -246,7 +246,8 @@ class CaktoEntrega(unittest.TestCase):
         puts = [ch[2]["json"] for ch in srv.chamadas if ch[0] == "PUT"]
         self.assertEqual(puts, [{"contentDeliveries": ["emailAccess"],
                                  "emailAccessLink": "https://drive.google.com/file/d/A/view"},
-                                {"image": "https://c/1.png"}, {"status": "active"}])
+                                {"name": nome, "description": produto_bom()["descricao_oferta"],
+                                 "price": "7.00", "image": "https://c/1.png"}, {"status": "active"}])
         self.assertTrue(r["ativo"] and r["existente"])
         self.assertEqual(r["link"], "https://pay.cakto.com.br/77BcHrY")
 

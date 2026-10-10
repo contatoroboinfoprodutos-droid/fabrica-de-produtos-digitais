@@ -90,27 +90,20 @@ def _acessivel(url: str) -> bool:
         return False
 
 
+REPO_PADRAO = "fabricadeprodutosdigitais/fabrica-de-produtos-digitais"
+
+
 def urls_da_capa(produto: dict, capa_path: str | None, linhas: list[str]) -> list[str]:
-    """URLs públicas candidatas da capa: Drive (imediata) e GitHub raw (vale depois do commit do workflow)."""
-    urls = []
-    if capa_path:
-        drive = Drive()
-        if drive.configurada():
-            try:
-                url = drive.publicar_imagem(capa_path, f"{produto['id']}-capa.png")
-                if _acessivel(url):
-                    urls.append(url)
-                else:
-                    linhas.append("drive: a capa foi enviada mas a URL pública ainda não responde como imagem")
-            except ErroDrive as e:
-                linhas.append(f"drive: não consegui hospedar a capa ({e})")
-        repo = os.getenv("GITHUB_REPOSITORY", "").strip()
-        if repo:
-            raw = (f"https://raw.githubusercontent.com/{repo}/{os.getenv('GITHUB_REF_NAME') or 'main'}/"
-                   f"docs/capas/{produto['id']}.png")
-            if _acessivel(raw):  # só existe depois do commit do workflow
-                urls.append(raw)
-    return urls
+    """URL pública da capa: GitHub raw (repositório público). O Drive NÃO é usado para imagem: a conta de serviço não
+    tem cota no Meu Drive. A URL só entra se já responder como imagem, ou seja, depois do commit do workflow."""
+    repo = os.getenv("GITHUB_REPOSITORY", "").strip() or REPO_PADRAO
+    ref = os.getenv("GITHUB_REF_NAME", "").strip() or "main"
+    raw = f"https://raw.githubusercontent.com/{repo}/{ref}/docs/capas/{produto['id']}.png"
+    if _acessivel(raw):
+        return [raw]
+    linhas.append(f"{produto['id']}: a capa ainda não está em {ref} (raw responde sem imagem); "
+                  "segue com o envio do arquivo e a próxima execução usa a URL")
+    return []
 
 
 def enviar_capas(nomes: list[str] | None = None) -> list[str]:
@@ -135,7 +128,7 @@ def enviar_capas(nomes: list[str] | None = None) -> list[str]:
                     continue
                 capa_path = gerar_capa_produto(p, linhas)
                 try:
-                    plat.enviar_imagem(achado["id"], urls_da_capa(p, capa_path, linhas), capa_path)
+                    plat.enviar_imagem(achado["id"], urls_da_capa(p, capa_path, linhas), capa_path, p)
                 except plataformas.ErroPlataforma as e:
                     linhas.append(f"CAKTO_IMAGEM_ERROR: {p['id']} http={e.codigo or '-'} {e}")
                     print(f"CAKTO_IMAGEM_ERROR produto={p['id']} http={e.codigo or '-'} {e}", flush=True)

@@ -60,9 +60,10 @@ class EnvioDaImagem(Base):
         com = {**produto_api(NOME, pid="u1"), "image": "https://c/capa.png"}
         c, srv = cliente(self.rotas(Resp(200, {}), [Resp(200, com), Resp(200, com)]))
         self.usar(srv)
-        r = c.finalizar("u1", ["https://c/capa.png"], None)
+        r = c.finalizar("u1", ["https://c/capa.png"], None, {**produto_bom(), "preco": 8.9})
         puts = [kw["json"] for m, u, kw in srv.chamadas if m == "PUT"]
-        self.assertEqual(puts, [{"image": "https://c/capa.png"}, {"status": "active"}])
+        self.assertEqual(puts, [{"name": NOME, "description": produto_bom()["descricao_oferta"], "price": "8.90",
+                                 "image": "https://c/capa.png"}, {"status": "active"}])   # PUT com os dados obrigatórios
         self.assertEqual(r["imagem_erro"], "")
         self.assertTrue(r["ativo"])
 
@@ -87,7 +88,8 @@ class EnvioDaImagem(Base):
         self.assertIn("image", vistos[-1]["files"])
         self.assertEqual(vistos[-1]["files"]["image"][2], "image/png")
 
-    def test_falha_loga_CAKTO_IMAGEM_ERROR_com_codigo_e_nao_ativa(self):
+    def test_falha_loga_CAKTO_IMAGEM_ERROR_com_codigo_e_nao_ativa_quando_exige(self):
+        os.environ["CAKTO_EXIGE_IMAGEM"] = "true"
         sem = produto_api(NOME, status="waiting_config", pid="u1")
         c, srv = cliente(self.rotas(Resp(403, {}, "forbidden"), [Resp(200, sem)]))
         self.usar(srv)
@@ -106,8 +108,8 @@ class EnvioDaImagem(Base):
         with self.assertRaises(plataformas.ErroPlataforma):
             c.enviar_imagem("u1", ["https://a/x.png"])
 
-    def test_exige_imagem_false_ativa_mesmo_sem_capa(self):
-        os.environ["CAKTO_EXIGE_IMAGEM"] = "false"
+    def test_padrao_nao_exige_imagem_e_ativa_mesmo_sem_capa(self):
+        os.environ.pop("CAKTO_EXIGE_IMAGEM", None)
         ativo = produto_api(NOME, status="active", pid="u1")
         c, srv = cliente(self.rotas(lambda kw: Resp(403, {}, "x") if "image" in kw["json"] else Resp(200, {}),
                                     [Resp(200, ativo)]))
@@ -137,9 +139,6 @@ class Reparo(Base):
         p = mock.patch.object(capa, "PASTA_PADRAO", self.tmp.name)
         p.start()
         self.addCleanup(p.stop)
-        p = mock.patch.object(registrador, "Drive", lambda: mock.Mock(configurada=lambda: False))
-        p.start()
-        self.addCleanup(p.stop)
         p = mock.patch.object(registrador, "_acessivel", lambda u: True)
         p.start()
         self.addCleanup(p.stop)
@@ -156,7 +155,8 @@ class Reparo(Base):
         with mock.patch.object(plataformas, "instanciar", return_value=[c]):
             linhas = registrador.enviar_capas()
         put = next(kw["json"] for m, u, kw in srv.chamadas if m == "PUT")
-        self.assertEqual(put, {"image": f"https://raw.githubusercontent.com/o/r/main/docs/capas/{self.id}.png"})
+        self.assertEqual(put, {"name": NOME, "description": produto_bom()["descricao_oferta"], "price": "7.00",
+                               "image": f"https://raw.githubusercontent.com/o/r/main/docs/capas/{self.id}.png"})
         self.assertTrue(any("capa enviada" in l for l in linhas))
         self.assertTrue(os.path.exists(os.path.join(self.tmp.name, f"{self.id}.png")))
 
@@ -207,23 +207,19 @@ class UrlAcessivel(unittest.TestCase):
             self.assertFalse(registrador._acessivel("https://x/a.png"))
 
     def test_url_do_github_fora_do_ar_nao_vira_candidata(self):
-        with mock.patch.object(registrador, "_acessivel", lambda u: False), \
-                mock.patch.dict(os.environ, {"GITHUB_REPOSITORY": "o/r"}), \
-                mock.patch.object(registrador, "Drive", lambda: mock.Mock(configurada=lambda: False)):
-            self.assertEqual(registrador.urls_da_capa({"id": "p1"}, "/tmp/x.png", []), [])
+        linhas = []
+        with mock.patch.object(registrador, "_acessivel", lambda u: False), mock.patch.dict(os.environ, {"GITHUB_REPOSITORY": "o/r"}):
+            self.assertEqual(registrador.urls_da_capa({"id": "p1"}, "/tmp/x.png", linhas), [])
+        self.assertTrue(linhas)
 
-
-class DriveImagem(unittest.TestCase):
-    def test_publicar_imagem_envia_png_libera_e_devolve_url_direta(self):
-        from fabrica_produtos.drive import Drive
-        d = Drive.__new__(Drive)
-        d._achar = lambda nome: ""
-        d._enviar = mock.Mock(return_value="FILE1")
-        d._liberar_link = mock.Mock()
-        url = d.publicar_imagem("/tmp/x.png", "p1-capa.png")
-        d._enviar.assert_called_once_with("/tmp/x.png", "p1-capa.png", "image/png")
-        d._liberar_link.assert_called_once_with("FILE1")
-        self.assertIn("id=FILE1", url)
+    def test_nunca_usa_o_drive_para_imagem_e_o_repo_padrao_e_o_do_projeto(self):
+        with mock.patch.object(registrador, "_acessivel", lambda u: True), mock.patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("GITHUB_REPOSITORY", None)
+            os.environ.pop("GITHUB_REF_NAME", None)
+            urls = registrador.urls_da_capa({"id": "p20261005-1"}, None, [])
+        self.assertEqual(urls, ["https://raw.githubusercontent.com/fabricadeprodutosdigitais/fabrica-de-produtos-digitais/"
+                                "main/docs/capas/p20261005-1.png"])
+        self.assertFalse(hasattr(__import__("fabrica_produtos.drive", fromlist=["Drive"]).Drive, "publicar_imagem"))
 
 
 class Workflow(unittest.TestCase):
