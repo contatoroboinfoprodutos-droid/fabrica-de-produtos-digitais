@@ -13,8 +13,8 @@ on:
         description: "Só para definir-link: link de compra copiado da plataforma"
         required: false
   schedule:
-    - cron: "0 9 * * *"     # 06:00 Brasília -> cria 1 produto (respeita o teto diário FABRICA_MAX_POR_DIA)
-    - cron: "0 15 * * *"    # 12:00 Brasília -> mais uma chance (o agendador do GitHub às vezes não dispara)
+    - cron: "0 9 * * *"     # 06:00 Brasília -> cria os produtos do dia em sequência, até FABRICA_MAX_POR_DIA
+    - cron: "0 15 * * *"    # 12:00 Brasília -> completa o que faltar (o agendador do GitHub às vezes não dispara; teto atingido = sai verde)
     - cron: "0 21 * * *"    # 18:00 Brasília -> idem
     - cron: "30 */6 * * *"  # a cada 6 h -> procura o link dos produtos cadastrados e libera
 
@@ -28,7 +28,7 @@ concurrency:
 jobs:
   fabrica:
     runs-on: ubuntu-latest
-    timeout-minutes: 40   # sem isto uma chamada de IA travada prendia o robô por 6 h (execução de 08/10)
+    timeout-minutes: 45   # sem isto uma chamada de IA travada prendia o robô por 6 h (execução de 08/10)
     env:
       # --- IA (o orientador usa um provedor diferente do criador quando há mais de uma chave) ---
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -76,7 +76,7 @@ jobs:
       - name: Executa a fabrica
         run: |
           if [ "$EVENTO" = "workflow_dispatch" ]; then ACAO="${ACAO_INPUT:-criar}"
-          elif [ "$CRON" = "0 9 * * *" ] || [ "$CRON" = "0 15 * * *" ] || [ "$CRON" = "0 21 * * *" ]; then ACAO=criar
+          elif [ "$CRON" = "0 9 * * *" ] || [ "$CRON" = "0 15 * * *" ] || [ "$CRON" = "0 21 * * *" ]; then ACAO=criar; LOTE="--lote"
           else ACAO=verificar; fi
           echo "Acao: $ACAO"
           if [ "$ACAO" = "definir-link" ]; then
@@ -85,7 +85,7 @@ jobs:
             fi
             python -m fabrica_produtos definir-link --id "$PRODUTO_ID" --link "$LINK_COMPRA"
           else
-            python -m fabrica_produtos "$ACAO"
+            python -m fabrica_produtos "$ACAO" ${LOTE:-}
           fi
 
       - name: Atualiza a pagina link-na-bio (so le o catalogo, sem IA)

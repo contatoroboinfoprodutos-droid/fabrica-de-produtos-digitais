@@ -73,7 +73,7 @@ class Limites(Base):
         wf = os.path.join(RAIZ, ".github", "workflows")
         for arq, job in (("produto.yml", "fabrica"), ("lowticket.yml", "lowticket"), ("main.yml", "run-crew")):
             d = yaml.safe_load(open(os.path.join(wf, arq), encoding="utf-8"))
-            self.assertLessEqual(d["jobs"][job]["timeout-minutes"], 40, arq)
+            self.assertLessEqual(d["jobs"][job]["timeout-minutes"], 45, arq)
         d = yaml.safe_load(open(os.path.join(wf, "produto.yml"), encoding="utf-8"))
         crons = [c["cron"] for c in d[True]["schedule"]]
         self.assertEqual(sorted(crons), sorted(["0 9 * * *", "0 15 * * *", "0 21 * * *", "30 */6 * * *"]))

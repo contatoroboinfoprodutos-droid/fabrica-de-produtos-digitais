@@ -1,6 +1,6 @@
 """Linha de comando da fábrica.
 
-  python -m fabrica_produtos criar                 cria, revisa e registra UM produto (respeita pausa e limite diário)
+  python -m fabrica_produtos criar [--lote]        cria, revisa e registra UM produto (--lote: até o teto diário; respeita pausa e limite)
   python -m fabrica_produtos verificar             procura os produtos pendentes nas plataformas e libera os que têm link
   python -m fabrica_produtos definir-link --id ID --link URL [--plataforma cakto]
   python -m fabrica_produtos sondar                relatório (somente leitura) do que as APIs aceitam
@@ -12,6 +12,7 @@ import argparse
 import logging
 import os
 import sys
+import time
 
 from . import catalogo, config_fabrica as cfg
 
@@ -25,14 +26,8 @@ def _saida(texto: str) -> None:
             f.write(texto + "\n\n")
 
 
-def cmd_criar() -> int:
-    if cfg.PAUSADA:
-        _saida("### Fábrica pausada (FABRICA_PAUSADA=true): nenhum produto novo foi criado.")
-        return 0
-    feitos = catalogo.criados_hoje()
-    if feitos >= cfg.MAX_PRODUTOS_POR_DIA:
-        _saida(f"### Limite diário atingido ({feitos}/{cfg.MAX_PRODUTOS_POR_DIA}): nenhum produto novo hoje.")
-        return 0
+def _criar_um() -> dict:
+    """Uma rodada: escolhe tema e nível, fabrica, guarda no catálogo e (se aprovado) registra na plataforma."""
     from . import fabrica, registrador  # import tardio: só aqui o CrewAI é necessário
 
     tema = fabrica.tema_da_rodada(os.getenv("PRODUTO_TOPICO", ""))
@@ -44,6 +39,41 @@ def cmd_criar() -> int:
         linhas = registrador.registrar_produto(res["registro"]["id"])
         texto += "\n\n### Registro\n" + "\n".join(f"- {l}" for l in linhas)
     _saida(texto)
+    return res
+
+
+def cmd_criar(lote: bool = False) -> int:
+    """Sem `lote`: UMA rodada (clique manual). Com `lote` (agendamento): repete até completar FABRICA_MAX_POR_DIA produtos
+    hoje, com rodízio de nichos. Se o teto já foi atingido, sai verde sem criar nada. Uma rodada que falha não
+    derruba as outras; o lote para ao atingir o teto, o orçamento de tempo ou o limite de tentativas."""
+    if cfg.PAUSADA:
+        _saida("### Fábrica pausada (FABRICA_PAUSADA=true): nenhum produto novo foi criado.")
+        return 0
+    feitos = catalogo.criados_hoje()
+    if feitos >= cfg.MAX_PRODUTOS_POR_DIA:
+        _saida(f"### Limite diário atingido ({feitos}/{cfg.MAX_PRODUTOS_POR_DIA}): nenhum produto novo hoje.")
+        return 0
+    if not lote:
+        _criar_um()
+        return 0
+    inicio = time.monotonic()
+    tentativas = (cfg.MAX_PRODUTOS_POR_DIA - feitos) + 2  # reprovado não conta no teto: dá 2 chances extras, não infinitas
+    falhas = 0
+    for n in range(1, tentativas + 1):
+        feitos = catalogo.criados_hoje()
+        if feitos >= cfg.MAX_PRODUTOS_POR_DIA:
+            break
+        if (time.monotonic() - inicio) / 60 >= cfg.LOTE_MINUTOS:
+            _saida(f"### Tempo do lote esgotado ({cfg.LOTE_MINUTOS:g} min): o que faltar fica para o próximo horário.")
+            break
+        _saida(f"## Produto {feitos + 1} de {cfg.MAX_PRODUTOS_POR_DIA} de hoje (tentativa {n})")
+        try:
+            _criar_um()
+        except Exception as e:  # falha de IA/plataforma: registra e segue; o próximo horário tenta de novo
+            falhas += 1
+            _saida(f"### Rodada falhou: {type(e).__name__}: {str(e)[:300]}")
+    _saida(f"### Lote concluído: {catalogo.criados_hoje()}/{cfg.MAX_PRODUTOS_POR_DIA} produtos de hoje" +
+           (f" ({falhas} rodada(s) falharam)" if falhas else ""))
     return 0
 
 
@@ -139,8 +169,10 @@ def main(argv=None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     ap = argparse.ArgumentParser(prog="fabrica_produtos")
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for nome in ("criar", "verificar", "sondar", "status", "marcas", "hub", "reels"):
+    for nome in ("verificar", "sondar", "status", "marcas", "hub", "reels"):
         sub.add_parser(nome)
+    c = sub.add_parser("criar")
+    c.add_argument("--lote", action="store_true", help="repete até o teto diário (usado pelo agendamento)")
     g = sub.add_parser("guardiao")
     for flag in ("--workflow", "--run-url", "--log", "--saida-titulo", "--saida-corpo"):
         g.add_argument(flag, required=True)
@@ -149,7 +181,7 @@ def main(argv=None) -> int:
     d.add_argument("--link", required=True)
     d.add_argument("--plataforma", default="")
     args = ap.parse_args(argv)
-    return {"criar": cmd_criar, "verificar": cmd_verificar, "sondar": cmd_sondar, "status": cmd_status, "marcas": cmd_marcas, "hub": cmd_hub, "reels": cmd_reels, "guardiao": lambda: cmd_guardiao(args),
+    return {"criar": lambda: cmd_criar(args.lote), "verificar": cmd_verificar, "sondar": cmd_sondar, "status": cmd_status, "marcas": cmd_marcas, "hub": cmd_hub, "reels": cmd_reels, "guardiao": lambda: cmd_guardiao(args),
             "definir-link": lambda: cmd_definir_link(args)}[args.cmd]()
 
 
