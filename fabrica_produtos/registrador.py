@@ -66,6 +66,89 @@ def gerar_pacote(produto: dict) -> dict:
     return {"pasta": pasta, "pdf": pdf, "ficha": ficha}
 
 
+def gerar_capa_produto(produto: dict, linhas: list[str]) -> str | None:
+    """Capa PNG em docs/capas/{id}.png (o commit do workflow publica no repositório). Nunca derruba o registro."""
+    try:
+        from . import capa
+        caminho = capa.gerar_capa(produto)
+        linhas.append(f"capa gerada em {caminho}")
+        return caminho
+    except Exception as e:  # sem Pillow/fonte: o produto segue sem capa, com o aviso no relatório
+        linhas.append(f"CAKTO_IMAGEM_ERROR: não consegui gerar a capa ({type(e).__name__}: {e})")
+        return None
+
+
+def _acessivel(url: str) -> bool:
+    """A URL da capa responde 200 com imagem? Não adianta mandar à Cakto um endereço que ainda não existe."""
+    import requests
+    try:
+        r = requests.get(url, timeout=20, stream=True)
+        ok = r.status_code == 200 and "image" in r.headers.get("Content-Type", "")
+        r.close()
+        return ok
+    except requests.RequestException:
+        return False
+
+
+def urls_da_capa(produto: dict, capa_path: str | None, linhas: list[str]) -> list[str]:
+    """URLs públicas candidatas da capa: Drive (imediata) e GitHub raw (vale depois do commit do workflow)."""
+    urls = []
+    if capa_path:
+        drive = Drive()
+        if drive.configurada():
+            try:
+                url = drive.publicar_imagem(capa_path, f"{produto['id']}-capa.png")
+                if _acessivel(url):
+                    urls.append(url)
+                else:
+                    linhas.append("drive: a capa foi enviada mas a URL pública ainda não responde como imagem")
+            except ErroDrive as e:
+                linhas.append(f"drive: não consegui hospedar a capa ({e})")
+        repo = os.getenv("GITHUB_REPOSITORY", "").strip()
+        if repo:
+            raw = (f"https://raw.githubusercontent.com/{repo}/{os.getenv('GITHUB_REF_NAME') or 'main'}/"
+                   f"docs/capas/{produto['id']}.png")
+            if _acessivel(raw):  # só existe depois do commit do workflow
+                urls.append(raw)
+    return urls
+
+
+def enviar_capas(nomes: list[str] | None = None) -> list[str]:
+    """Conserta produtos que já existem na Cakto 'Sem imagem': gera a capa, envia e, se o produto estava esperando
+    só por isso (waiting_config com entrega configurada), ativa. Idempotente: produto que já tem imagem é pulado."""
+    linhas = []
+    ativas = [pl for pl in plataformas.instanciar(nomes or cfg.PLATAFORMAS_ALVO) if pl.configurada()]
+    if not ativas:
+        return ["nenhuma plataforma configurada: defina os Secrets CAKTO_CLIENT_ID e CAKTO_CLIENT_SECRET"]
+    alvo = [p for p in catalogo.carregar()["produtos"] if p.get("status") in ("pronto", "aguardando_cadastro")]
+    if not alvo:
+        return ["nenhum produto na Cakto para conferir"]
+    for p in alvo:
+        for plat in ativas:
+            try:
+                achado = plat.buscar_por_nome(p["nome"])
+                if not achado:
+                    linhas.append(f"{p['id']}: não encontrado na {plat.nome} pelo nome")
+                    continue
+                if achado.get("imagem"):
+                    linhas.append(f"{p['id']}: já tem imagem")
+                    continue
+                capa_path = gerar_capa_produto(p, linhas)
+                try:
+                    plat.enviar_imagem(achado["id"], urls_da_capa(p, capa_path, linhas), capa_path)
+                except plataformas.ErroPlataforma as e:
+                    linhas.append(f"CAKTO_IMAGEM_ERROR: {p['id']} http={e.codigo or '-'} {e}")
+                    print(f"CAKTO_IMAGEM_ERROR produto={p['id']} http={e.codigo or '-'} {e}", flush=True)
+                    continue
+                linhas.append(f"{p['id']}: capa enviada")
+                if achado.get("status") == "waiting_config" and achado.get("entrega"):
+                    r = plat.ativar(achado["id"])
+                    linhas.append(f"{p['id']}: ativado ({r.get('status')})")
+            except plataformas.ErroPlataforma as e:
+                linhas.append(f"{p['id']} / {plat.nome}: erro ({e})")
+    return linhas
+
+
 def publicar_pdf(produto: dict, pacote: dict, linhas: list[str]) -> str | None:
     """Hospeda o PDF no Drive e devolve o link, ou None (e explica no relatório) se não for possível.
     Nunca levanta exceção: sem link o produto simplesmente nasce em 'waiting_config'."""
@@ -91,6 +174,7 @@ def registrar_produto(produto_id: str, dry_run: bool | None = None, nomes: list[
         return [f"produto {produto_id}: nada a registrar (status {p.get('status') if p else 'inexistente'})"]
     pacote = gerar_pacote(p)
     linhas = [f"pacote gerado em {pacote['pasta']}"]
+    capa_path = gerar_capa_produto(p, linhas)
     criado = None
 
     if dry_run:
@@ -100,6 +184,8 @@ def registrar_produto(produto_id: str, dry_run: bool | None = None, nomes: list[
         # Só hospeda o PDF se houver alguma plataforma pronta para usá-lo (evita envio à toa).
         url_entrega = publicar_pdf(p, pacote, linhas) if any(pl.configurada() for pl in plats) else None
         extra = {"url_entrega": url_entrega} if url_entrega else {}
+        if url_entrega:
+            extra.update({"urls_imagem": urls_da_capa(p, capa_path, linhas), "capa_path": capa_path})
         for plat in plats:
             if not plat.configurada():
                 linhas.append(f"{plat.nome}: pulada (faltam variáveis: {', '.join(plat.faltando())})")
@@ -111,6 +197,11 @@ def registrar_produto(produto_id: str, dry_run: bool | None = None, nomes: list[
                     origem = "já existia" if r.get("existente") else "criado"
                     linhas.append(f"{plat.nome}: produto {origem} (id {r.get('id', '?')}, "
                                   f"status {r.get('status', '?')})")
+                    if r.get("imagem_erro"):
+                        linhas.append(f"CAKTO_IMAGEM_ERROR: {r['imagem_erro']}. O produto fica em 'waiting_config' até a capa "
+                                      "subir (rode a ação `capas`)")
+                    elif url_entrega:
+                        linhas.append(f"{plat.nome}: capa enviada ({r.get('imagem', '')[:70] or 'ok'})")
                     if r.get("ativo") and link_ok(r.get("link", "")):
                         if criado is None:
                             criado = (plat.nome, r["link"])

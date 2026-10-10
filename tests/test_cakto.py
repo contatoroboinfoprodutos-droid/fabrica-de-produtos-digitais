@@ -106,15 +106,21 @@ class ClienteCakto(unittest.TestCase):
     def test_criar_com_entrega_e_pagina_de_vendas(self):
         os.environ["CAKTO_SALES_PAGE"] = "https://loja.exemplo.com.br/p"
         corpos = []
+        com_imagem = {**produto_api(), "image": "https://x/capa.png"}
         c, srv = cliente({("GET", "/public_api/products/"): Resp(200, {"results": []}),
                           ("POST", "/public_api/products/"):
-                              lambda kw: (corpos.append(kw["json"]), Resp(201, produto_api()))[1]})
+                              lambda kw: (corpos.append(kw["json"]), Resp(201, produto_api(status="waiting_config")))[1],
+                          ("PUT", "/public_api/products/uuid-1/"): Resp(200, {}),
+                          ("GET", "/public_api/products/uuid-1/"): [Resp(200, com_imagem), Resp(200, com_imagem)]})
         self.usar(srv)
-        r = c.criar_produto({**produto_bom(), "preco": 7.0}, "x.pdf", url_entrega="https://drive.exemplo/pdf")
-        self.assertEqual(corpos[0]["status"], "active")
+        r = c.criar_produto({**produto_bom(), "preco": 7.0}, "x.pdf", url_entrega="https://drive.exemplo/pdf",
+                            urls_imagem=["https://x/capa.png"])
+        self.assertEqual(corpos[0]["status"], "waiting_config")   # só ativa depois da capa
         self.assertEqual(corpos[0]["contentDeliveries"], ["emailAccess"])
         self.assertEqual(corpos[0]["emailAccessLink"], "https://drive.exemplo/pdf")
         self.assertEqual(corpos[0]["salesPage"], "https://loja.exemplo.com.br/p")
+        puts = [kw["json"] for m, u, kw in srv.chamadas if m == "PUT"]
+        self.assertEqual(puts, [{"image": "https://x/capa.png"}, {"status": "active"}])
         self.assertTrue(r["ativo"])
 
     def test_criar_nao_duplica_quando_ja_existe(self):
