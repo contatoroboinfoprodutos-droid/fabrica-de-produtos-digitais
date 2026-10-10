@@ -305,6 +305,168 @@
           "evento": "registrado na cakto por API; link recebido"
         }
       ]
+    },
+    {
+      "nome": "Guia Prático de Estudos: Foco e Retenção Diária",
+      "tipo": "Guia",
+      "preco": 8.9,
+      "promessa": "Aprenda a organizar sua rotina de estudos, reduzir distrações e reter conteúdos teóricos por meio de passos práticos de leitura ativa e revisão.",
+      "publico": "Estudantes, concurseiros e profissionais que precisam aprender novos assuntos por conta própria com mais clareza e organização de tempo.",
+      "conteudos": [
+        "Organização do ambiente físico e digital livre de distrações",
+        "Planejamento de blocos de estudo com pausas programadas",
+        "Técnica de anotações ativas e síntese com suas próprias palavras",
+        "Recuperação ativa da memória sem consultar o material",
+        "Construção de um cronograma semanal simples e sustentável"
+      ],
+      "descricao_oferta": "Este guia prático ensina passos diretos para estruturar sua rotina de estudos e manter a concentração no dia a dia. Você aprenderá a preparar um ambiente livre de interrupções, dividir matérias em blocos realistas, fazer anotações eficientes com suas próprias palavras e aplicar exercícios de recuperação de memória para fixar o conteúdo lido. Sem fórmulas mágicas, o material traz instruções claras, exemplos de rotina e pequenos exercícios para você aplicar imediatamente no seu caderno ou computador.",
+      "capitulos": [
+        {
+          "titulo": "Organização do ambiente físico e digital livre de distrações",
+          "texto": "Para manter a concentração, o primeiro passo é controlar o ambiente ao seu redor. Comece limpando sua mesa de trabalho: retire papéis soltos, embalagens, louças e materiais de outras disciplinas. Mantenha à vista apenas o livro ou caderno da matéria que será estudada no momento. No ambiente digital, feche todas as abas do navegador que não tenham relação com o tópico, silencie o celular e deixe o aparelho em outro cômodo ou fora do campo de visão imediato. Passos práticos: 1. Separe lápis, borracha, caderno e água antes de começar. 2. Feche redes sociais e aplicativos de mensagens no computador. 3. Ajuste uma iluminação adequada que não canse os olhos. Exemplo: se você vai estudar Direito Constitucional por uma hora, deixe sobre a mesa apenas a apostila da matéria e uma caneta, guardando os manuais de outras matérias na gaveta. Mini-exercício: reserve cinco minutos agora mesmo para retirar pelo menos três objetos desnecessários da sua mesa e colocar o telefone no modo silencioso antes de abrir qualquer página."
+        },
+        {
+          "titulo": "Planejamento de blocos de estudo com pausas programadas",
+          "texto": "Tentar estudar por quatro horas seguidas sem interrupção diminui o rendimento e cansa a mente rapidamente. A melhor abordagem consiste em estruturar sessões em blocos curtos e focados de 30 a 50 minutos, intercalados por pausas de 5 a 10 minutos. Durante a pausa, evite olhar redes sociais ou telas, preferindo levantar, beber água ou alongar o corpo. Passos práticos: 1. Defina um objetivo único para o bloco, como ler cinco páginas ou resolver oito questões. 2. Ative um cronômetro com alarme discreto e inicie a leitura imediatamente. 3. Quando o alarme tocar, pare no ponto onde estiver e faça uma pausa física de cinco minutos. Exemplo: um estudante reserva um bloco de 35 minutos exclusivamente para resumir um capítulo de Biologia; ao encerrar o tempo, levanta da cadeira, toma um copo de água na cozinha e retorna revigorado para o próximo ciclo. Mini-exercício: escolha uma matéria hoje, defina exatamente uma meta para um bloco de 30 minutos e cumpra essa janela sem tocar em nenhuma outra tarefa até o alarme soar."
+        },
+        {
+          "titulo": "Técnica de anotações ativas e síntese com suas próprias palavras",
+          "texto": "A leitura passiva, na qual você apenas grifa frases com caneta marca-texto, gera uma falsa sensação de domínio do conteúdo. Para aprender de forma profunda, é necessário aplicar anotações ativas, sintetizando as ideias com suas próprias palavras. Passos práticos: 1. Leia uma seção inteira de texto de três ou quatro parágrafos sem fazer anotações imediatas. 2. Feche o material ou desvie o olhar da página. 3. Escreva no seu caderno, em uma ou duas frases diretas, a ideia central que você acabou de compreender, como se estivesse explicando para outra pessoa. Exemplo: ao estudar a estrutura de uma célula, em vez de copiar a frase literal do livro sobre as mitocôndrias, escreva no caderno: as mitocôndrias produzem a energia necessária para a célula a partir dos nutrientes. Mini-exercício: abra a página do assunto que está estudando, leia dois parágrafos, feche os olhos por dez segundos e escreva um resumo de apenas duas linhas com seu próprio vocabulário, sem consultar o texto original durante a escrita."
+        },
+        {
+          "titulo": "Recuperação ativa da memória sem consultar o material",
+          "texto": "A memória de longo prazo é fortalecida quando você se esforça para lembrar de uma informação sem olhar as respostas. Em vez de reler o mesmo texto várias vezes, pratique a recuperação ativa regularmente. Passos práticos: 1. Ao final de uma sessão de estudo, elabore três perguntas simples sobre os tópicos mais importantes vistos naquele dia. 2. No dia seguinte, antes de iniciar novos assuntos, tente responder a essas perguntas por escrito ou em voz alta sem consultar o caderno. 3. Compare suas respostas com as anotações originais para corrigir lacunas e reforçar os pontos esquecidos. Exemplo: após estudar História, anote a pergunta: quais foram os dois motivos para o início da revolução? No dia seguinte, responda de cabeça antes de abrir os apontamentos. Mini-exercício: pegue um conceito que você estudou ontem ou hoje de manhã e escreva uma pergunta direta sobre ele. Tente responder sem olhar nenhum material; depois, abra o caderno e confira se a sua explicação estava correta e completa."
+        },
+        {
+          "titulo": "Construção de um cronograma semanal simples e sustentável",
+          "texto": "Um planejamento sobrecarregado gera frustração e abandono da rotina. Um cronograma eficiente precisa ser simples, visual e com espaço para imprevistos da vida diária. Passos práticos: 1. Mapeie primeiro seus compromissos fixos da semana, como trabalho, transporte, refeições e sono. 2. Identifique horários livres e defina blocos de estudo modestos, entre 45 e 90 minutos por dia, priorizando a constância em vez de volumes gigantescos. 3. Reserve um dia da semana ou um período livre de estudos para descanso ou para repor conteúdos atrasados. Exemplo: em uma folha, marque de segunda a sexta-feira um bloco das 19h30 às 20h30 para estudo de teoria, deixando o sábado de manhã apenas para revisão geral e o domingo totalmente livre. Mini-exercício: desenhe uma grade simples de sete dias no papel, insira seus horários obrigatórios de rotina e defina exatamente três dias da semana onde você terá uma hora dedicada aos seus estudos, anotando a matéria exata de cada um desses dias."
+        }
+      ],
+      "nicho": "Estudos e concentração",
+      "id": "p20261010-1",
+      "criado_em": "2026-10-10T06:21:09-03:00",
+      "preco_texto": "R$ 8,90",
+      "status": "pronto",
+      "plataforma": "cakto",
+      "link_compra": "https://pay.cakto.com.br/odb9ch4",
+      "historico": [
+        {
+          "quando": "2026-10-10T06:21:09-03:00",
+          "evento": "aprovado por orientador + travas de código em 1 rodada(s)"
+        },
+        {
+          "quando": "2026-10-10T06:21:13-03:00",
+          "evento": "registrado na cakto por API; link recebido"
+        }
+      ]
+    },
+    {
+      "nome": "Guia Prático de Organização do Home Office",
+      "tipo": "Guia",
+      "preco": 8.9,
+      "promessa": "Aprenda a estruturar um espaço de trabalho funcional em casa para manter o foco e reduzir distrações diárias.",
+      "publico": "Profissionais e estudantes que trabalham em casa e precisam organizar o ambiente e a rotina de trabalho.",
+      "conteudos": [
+        "Delimitação do espaço físico e ergonomia essencial",
+        "Organização da mesa e descarte de itens desnecessários",
+        "Gestão de cabos, equipamentos e materiais de apoio",
+        "Organização digital de arquivos e área de trabalho",
+        "Rituais de abertura e encerramento da jornada de trabalho"
+      ],
+      "descricao_oferta": "O Guia Prático de Organização do Home Office é um manual direto em texto para quem precisa transformar o ambiente de trabalho em casa. O material aborda desde ajustes de ergonomia e redução de bagunça na mesa até gerenciamento de fios, organização de pastas no computador e criação de limites claros entre expediente e vida pessoal. Cada capítulo traz orientações objetivas, exemplos simples com itens comuns do dia a dia e exercícios rápidos de aplicação imediata para deixar sua rotina mais prática.",
+      "capitulos": [
+        {
+          "titulo": "Delimitação do espaço físico e ergonomia essencial",
+          "texto": "Para transformar qualquer cômodo ou canto da casa em uma estação de trabalho eficiente, é indispensável delimitar fronteiras claras. Passo 1: Defina um local específico e fixo para suas tarefas, evitando trabalhar na cama ou no sofá. Passo 2: Ajuste a altura do assento para que seus pés fiquem totalmente apoiados no chão e os joelhos formem um ângulo de noventa graus. Passo 3: Posicione a borda superior do monitor na linha dos seus olhos, mantendo uma distância média de sessenta centímetros da tela para evitar tensão no pescoço. Exemplo: Ao utilizar um notebook em uma mesa padrão, você pode colocar três livros grossos embaixo da base do aparelho para elevar a tela e conectar um teclado e mouse externos para manter os braços relaxados sobre o tampo. Mini-exercício: Sente-se na sua cadeira de trabalho agora com a postura correta. Olhe em linha reta para a frente. Se a sua visão natural cair abaixo da borda do monitor, encontre imediatamente um suporte improvisado e ajuste a altura da tela antes de continuar."
+        },
+        {
+          "titulo": "Organização da mesa e descarte de itens desnecessários",
+          "texto": "O excesso de objetos sobre a mesa sobrecarrega a atenção e consome tempo útil. Passo 1: Retire absolutamente tudo da superfície, deixando o tampo completamente limpo. Passo 2: Limpe a poeira com um pano úmido para renovar a sensação visual do espaço. Passo 3: Categorize os objetos em duas caixas: uso diário (teclado, mouse, bloco e garrafa de água) e uso eventual (notas fiscais, grampeador e cabos extras). Passo 4: Devolva à mesa apenas os itens da primeira categoria, guardando o restante em gavetas ou caixas organizadoras fechadas. Exemplo: Em vez de manter um porta-canetas com quinze unidades sobre a mesa, selecione apenas duas canetas que funcionam bem e guarde as outras treze dentro de um estojo na gaveta. Mini-exercício: Olhe para a sua mesa neste momento. Identifique cinco itens que você não utilizou nas últimas quarenta e oito horas. Guarde-os em outro cômodo ou em uma gaveta agora mesmo, liberando espaço físico útil no seu campo de visão imediato."
+        },
+        {
+          "titulo": "Gestão de cabos, equipamentos e materiais de apoio",
+          "texto": "Cabos emaranhados e equipamentos espalhados criam poluição visual e dificultam a limpeza diária. Passo 1: Desconecte fios que não estão em uso regular e identifique as pontas dos cabos essenciais com pequenas fitas adesivas coloridas. Passo 2: Use abraçadeiras de velcro, presilhas plásticas ou arames encapados para juntar os fios que seguem na mesma direção. Passo 3: Fixe réguas de tomada ou filtros de linha na parte inferior da mesa ou na lateral do móvel com fita dupla face resistente, tirando os adaptadores do chão. Exemplo: Agrupar o cabo de energia do monitor com o fio do carregador do computador em uma única fita de velcro presa ao pé traseiro da mesa elimina o emaranhado sob seus pés. Mini-exercício: Pegue dois cabos que estão soltos ou caídos atrás da sua mesa hoje. Use um arame de pão ou um pedaço de barbante para prendê-los juntos de forma alinhada, evitando que fiquem pendurados de forma desordenada pelo chão."
+        },
+        {
+          "titulo": "Organização digital de arquivos e área de trabalho",
+          "texto": "A desordem na tela do computador gera tanto estresse quanto uma mesa física bagunçada. Passo 1: Crie uma pasta principal no seu computador e divida em apenas quatro subpastas lógicas: 01_Projetos_Ativos, 02_Arquivos_Recorrentes, 03_Arquivo_Morto e 04_Pessoal. Passo 2: Padronize o nome de cada documento usando a data no formato invertido de ano, mês e dia antes do assunto principal, como '2024-11-relatorio.pdf', o que mantém as listagens em ordem cronológica. Passo 3: Mantenha a área de trabalho do sistema operacional limpa, sem atalhos desnecessários ou capturas de tela acumuladas. Exemplo: Em vez de deixar uma proposta comercial solta na pasta Downloads com o nome genérico 'documento_final.pdf', salve o arquivo na pasta '01_Projetos_Ativos' renomeado como '2024-11-proposta-cliente.pdf'. Mini-exercício: Acesse sua área de trabalho agora. Crie uma pasta temporária chamada 'Triagem' e mova todos os arquivos soltos da tela para lá, deixando a área de trabalho completamente limpa em menos de três minutos."
+        },
+        {
+          "titulo": "Rituais de abertura e encerramento da jornada de trabalho",
+          "texto": "Trabalhar em casa exige uma separação clara entre a rotina profissional e a vida pessoal para evitar sobrecarga mental. Passo 1: Estabeleça um ritual de início consistente, como tirar o pijama, vestir uma roupa adequada e encher uma garrafa de água antes de sentar no horário planejado. Passo 2: Ao final do expediente, reserve cinco minutos para registrar as tarefas pendentes em um caderno, definindo as prioridades da manhã seguinte. Passo 3: Desligue o computador e organize os objetos da mesa para marcar o fechamento do dia. Exemplo: Guardar o teclado sob o monitor e fechar a tampa do notebook no final da tarde funciona como um gatilho físico de que o expediente formal acabou e o descanso começou. Mini-exercício: Defina agora o horário exato de término do seu expediente de hoje. Coloque um alarme no celular e, quando ele soar, encerre as tarefas, limpe o tampo da mesa e saia do ambiente de trabalho imediatamente."
+        }
+      ],
+      "nicho": "Organização do home office",
+      "id": "p20261010-2",
+      "criado_em": "2026-10-10T06:23:45-03:00",
+      "preco_texto": "R$ 8,90",
+      "status": "pronto",
+      "plataforma": "cakto",
+      "link_compra": "https://pay.cakto.com.br/x5hm32r",
+      "historico": [
+        {
+          "quando": "2026-10-10T06:23:45-03:00",
+          "evento": "aprovado por orientador + travas de código em 1 rodada(s)"
+        },
+        {
+          "quando": "2026-10-10T06:23:49-03:00",
+          "evento": "registrado na cakto por API; link recebido"
+        }
+      ]
+    },
+    {
+      "nome": "Manual do Orçamento Familiar: Da Despesa à Rotina",
+      "tipo": "Pacote",
+      "preco": 19.9,
+      "promessa": "Aprenda a estruturar o orçamento da sua casa, alinhar as contas conjuntas e manter uma rotina de controle mensal sem atritos.",
+      "publico": "Famílias e casais que dividem despesas domésticas e buscam organizar os gastos do lar com previsibilidade e clareza.",
+      "conteudos": [
+        "Mapeamento das despesas fixas e variáveis da casa",
+        "Definição de modelo de divisão de contas no lar",
+        "Criação do teto de gastos por categoria doméstica",
+        "Rotina semanal de conferência e ajustes de despesas",
+        "Planejamento de compras periódicas e reserva doméstica"
+      ],
+      "descricao_oferta": "Este guia prático em formato de texto oferece um passo a passo objetivo para organizar as finanças da sua casa. Ao longo de cinco capítulos, você aprenderá a catalogar contas fixas e variáveis, definir critérios justos para dividir despesas entre moradores, estabelecer limites claros por categoria, conduzir reuniões semanais rápidas de alinhamento e planejar manutenções domésticas sem surpresas no fim do mês. Um conteúdo direto, com exemplos aplicáveis e exercícios rápidos para trazer previsibilidade e tranquilidade à rotina financeira da família.",
+      "capitulos": [
+        {
+          "titulo": "Mapeamento das despesas fixas e variáveis da casa",
+          "texto": "O primeiro passo para organizar a administração do lar consiste em identificar com clareza para onde o dinheiro da casa é destinado a cada mês. Muitas famílias tentam cortar gastos sem saber exatamente quais saídas são contratuais e quais oscilam ao longo do período. Para criar esse mapeamento com precisão, execute as quatro etapas sequenciais descritas abaixo:\n\n1. Reúna os comprovantes dos últimos três meses de moradia, englobando extratos bancários, faturas de cartão e recibos de pagamentos de contas físicas da habitação.\n2. Separe as despesas fixas, que são aquelas cujo valor não depende do consumo direto da rotina diária, a exemplo de aluguel, condomínio, mensalidade escolar e planos de internet.\n3. Isole as despesas variáveis essenciais, cujos valores sofrem oscilação mensal conforme o uso contínuo, tais como energia elétrica, abastecimento de água encanada, botijão de gás e compras de supermercado.\n4. Registre todos os valores em uma folha física ou documento digital centralizado, calculando a soma exata do custo básico que o imóvel exige apenas para operar a cada mês.\n\nConsidere o exemplo de uma residência compartilhada por três pessoas adultas. Ao analisarem os boletos do último trimestre, os moradores verificam que o aluguel consome 1.800 reais e a taxa condominial exige 450 reais de maneira fixa. Já a fatura de eletricidade varia entre 220 e 310 reais, enquanto o mercado consome entre 1.100 e 1.400 reais mensais. Com esses números devidamente anotados, a família descobre que o custo mínimo operacional do lar nunca fica abaixo de 3.570 reais por ciclo mensal. Saber esse número exato elimina a sensação de incerteza e permite prever com clareza a quantia que precisa estar reservada antes de qualquer consumo secundário.\n\nMINI-EXERCÍCIO: Pegue uma folha de papel e divida-a em duas colunas verticais com os títulos Fixas e Variáveis. Escreva ao menos cinco contas fixas da sua residência na coluna esquerda e quatro contas variáveis essenciais na coluna direita com as médias dos últimos três meses. Some os valores de cada coluna para identificar o custo operacional base da sua casa.\n\nRESUMO DO CAPÍTULO: O objetivo desta etapa é calcular com precisão o custo mínimo necessário para manter a residência em funcionamento pleno, diferenciando os pagamentos imutáveis das despesas que oscilam ao longo do mês."
+        },
+        {
+          "titulo": "Definição de modelo de divisão de contas no lar",
+          "texto": "Quando mais de uma pessoa contribui para as despesas de uma mesma residência, a ausência de um critério claro de divisão gera desentendimentos e atrasos em pagamentos. A definição antecipada do método de rateio assegura transparência e previsibilidade para todos os envolvidos no orçamento conjunto. Para estruturar esse modelo de divisão de forma harmoniosa e funcional, siga os seguintes passos numerados:\n\n1. Coloque sobre a mesa o rendimento líquido real de cada participante da casa, sem incluir bônus incertos ou horas extras não previstas na rotina habitual.\n2. Avalie se a dinâmica da casa funciona melhor com o modelo igualitário (divisão meio a meio) ou com o modelo proporcional à renda (cada morador contribui com uma porcentagem correspondente ao valor que recebe).\n3. Escolha a modalidade de recolhimento dos recursos, optando pelo pagamento individualizado de boletos designados ou pela criação de uma conta centralizadora específica para as contas do lar.\n4. Delimite explicitamente quais despesas são de responsabilidade comum da habitação e quais devem permanecer sob a responsabilidade financeira individual de cada integrante.\n\nComo exemplo prático, imagine duas pessoas que compartilham uma moradia. O Morador A recebe 3.000 reais líquidos por mês, enquanto o Morador B recebe 6.000 reais líquidos, gerando uma renda conjunta de 9.000 reais. Em uma divisão meio a meio de despesas comuns de 4.000 reais, cada pessoa pagaria 2.000 reais. Isso comprometeria 67% da renda do Morador A e apenas 33% da renda do Morador B. Ao adotarem o modelo proporcional à renda, o Morador A passa a arcar com 33% dos gastos comuns (1.320 reais) e o Morador B assume 67% da soma (2.680 reais). Essa partilha mantém o equilíbrio financeiro e preserva a margem de segurança de ambos os membros da residência.\n\nMINI-EXERCÍCIO: Calcule hoje a proporção exata da sua casa. Some a renda líquida de todos os membros que contribuem com os custos residenciais. Em seguida, divida a renda individual de cada um pelo total conjunto e multiplique por 100 para descobrir a porcentagem de contribuição correspondente a cada morador no modelo proporcional.\n\nRESUMO DO CAPÍTULO: O objetivo principal desta seção é instituir um critério transparente de rateio das despesas comuns, alinhando a participação financeira de cada morador à realidade dos seus ganhos líquidos."
+        },
+        {
+          "titulo": "Criação do teto de gastos por categoria doméstica",
+          "texto": "Após mapear os custos essenciais e definir a partilha entre os membros da casa, torna-se necessário estabelecer limites numéricos claros para impedir que gastos cotidianos ultrapassem os recursos disponíveis do lar. O teto de gastos funciona como uma cerca de proteção para cada grupo de despesas mensais. Implemente esse controle prático por meio das etapas detalhadas abaixo:\n\n1. Agrupe os gastos variáveis e rotineiros em categorias funcionais claras, tais como alimentação em casa, refeições fora de casa, farmácia, transporte e lazer compartilhado.\n2. Estipule um valor monetário máximo para cada uma dessas categorias, tomando como referência o histórico dos meses anteriores e a renda total líquida da casa.\n3. Defina um integrante responsável pelo acompanhamento periódico de cada categoria, assegurando que o somatório dos comprovantes seja controlado antes do final do ciclo.\n4. Estabeleça a regra de compensação imediata: se uma categoria ultrapassar o limite estipulado, o valor excedente deve ser obrigatoriamente reduzido de outra categoria no mesmo período mensal.\n\nObserve o exemplo prático de uma família com quatro membros. Ao analisarem os comprovantes do mês anterior, eles constataram que pedidos de entrega de comida aos finais de semana atingiam valores imprevistos. A família estabeleceu então um teto mensal de 400 reais para refeições pedidas fora e 1.600 reais para compras de supermercado. Na terceira semana do mês, a contagem apontou que os pedidos de entrega já acumulavam 380 reais. Em comum acordo, os moradores decidiram preparar jantares caseiros no restante do mês, respeitando a meta estabelecida e evitando a contração de dívidas.\n\nMINI-EXERCÍCIO: Escolha duas categorias de consumo da sua casa que costumam oscilar muito ao longo do mês, como supermercado e delivery. Analise os gastos totais dessas duas áreas no mês passado e determine um teto numérico realista para cada uma nos próximos trinta dias, fixando esses valores em local visível.\n\nRESUMO DO CAPÍTULO: Esta seção ensina a fixar valores máximos para as categorias variáveis do orçamento doméstico, permitindo frear excessos e aplicar compensações imediatas antes do encerramento das contas mensais."
+        },
+        {
+          "titulo": "Rotina semanal de conferência e ajustes de despesas",
+          "texto": "Aguardar o final do mês para verificar o extrato bancário ou a fatura do cartão é o principal motivo pelo qual as famílias perdem o controle do orçamento doméstico. O acompanhamento contínuo em intervalos curtos permite identificar desvios a tempo de corrigi-los antes do fechamento do ciclo financeiro. Para consolidar esse hábito de monitoramento prático, siga os seguintes passos:\n\n1. Reserve um horário fixo de quinze a vinte minutos na agenda semanal da residência, preferencialmente aos domingos à noite ou nas primeiras horas da manhã de segunda-feira.\n2. Reúna todos os comprovantes físicos, notas fiscais e lançamentos bancários ocorridos ao longo dos últimos sete dias corridos.\n3. Lance os registros no caderno, planilha ou documento da família, comparando o gasto acumulado da semana com a fração esperada do teto mensal daquela categoria.\n4. Caso alguma linha de gasto tenha excedido a meta prevista para a semana, conversem imediatamente e definam quais adaptações de consumo serão aplicadas nos próximos sete dias para restabelecer o equilíbrio.\n\nVeja o exemplo de um casal que instituiu a checagem semanal aos domingos, às 19 horas. Durante a conferência da segunda semana do mês, eles notaram que uma compra inesperada na farmácia e o reparo de uma torneira somaram 250 reais que não constavam no planejamento daqueles sete dias. Como o diagnóstico foi realizado no meio do mês, o casal conseguiu replanejar as refeições caseiras da semana seguinte e adiar uma ida ao cinema que estava programada. Essa intervenção ágil evitou o uso do limite bancário e manteve o orçamento do mês dentro do teto global estipulado.\n\nMINI-EXERCÍCIO: Defina agora o dia e a hora em que ocorrerá a conferência financeira semanal da sua residência. Cadastre esse horário no alarme do seu telefone com repetição semanal e separe um recipiente físico para guardar as notas e recibos obtidos ao longo da próxima semana até a primeira conferência.\n\nRESUMO DO CAPÍTULO: O objetivo deste capítulo é implementar uma rotina curta e periódica de checagem financeira, possibilitando intervenções rápidas para corrigir desvios semanais antes que eles comprometam o orçamento do mês."
+        },
+        {
+          "titulo": "Planejamento de compras periódicas e reserva doméstica",
+          "texto": "Gastos sazonais e manutenções na estrutura residencial são acontecimentos normais ao longo da vida de qualquer família. Equipamentos sofrem desgaste, impostos anuais são emitidos no início do ano e reparos hidráulicos acontecem com frequência. Tratar esses acontecimentos naturais como surpresas desestabiliza a tranquilidade da casa. Para proteger o orçamento familiar contra essas demandas periódicas, execute os quatro passos a seguir:\n\n1. Liste detalhadamente as obrigações anuais e manutenções periódicas da moradia, incluindo tributos do imóvel, seguros residenciais e revisão de filtros, telhas e instalações.\n2. Estime o valor monetário necessário para essas demandas no período de doze meses e divida a quantia total por doze para achar o valor mensal correspondente.\n3. Abra uma conta bancária ou espaço separado das despesas correntes diárias da casa, destinado unicamente a acolher os depósitos dessa provisão residencial preventiva.\n4. Programe as reposições de produtos domésticos não perecíveis em ciclos regulares, comprando volumes adequados com antecedência para evitar aquisições fracionadas sob pressão de tempo.\n\nConsidere o caso prático de uma moradia onde os moradores pagam 1.200 reais anuais de IPTU, sabem que a manutenção da caixa d'água custa 600 reais anuais e reservam mais 600 reais por ano para pequenos consertos hidráulicos e elétricos. A soma dessas despesas equivale a 2.400 reais anuais. Em vez de sofrerem uma sobrecarga financeira severa no mês em que o imposto vence, os moradores transferem mensalmente 200 reais para a reserva doméstica. Quando a guia do IPTU chega e um vazamento ocorre na área de serviço, os valores já se encontram disponíveis para quitação integral sem sobressaltos.\n\nMINI-EXERCÍCIO: Elabore uma lista com ao menos três despesas sazonais ou manutenções indispensáveis que seu lar terá nos próximos doze meses. Anote a soma estimada dos três custos, divida o total obtido por doze e estipule a quantia exata que a família deverá guardar a cada mês para cobrir essas demandas futuras.\n\nRESUMO DO CAPÍTULO: Esta etapa final visa transformar despesas sazonais previsíveis e custos de manutenção em parcelas mensais planejadas, blindando o fluxo de caixa doméstico contra gastos acumulados de início de ano e consertos emergenciais."
+        }
+      ],
+      "nicho": "Finanças domésticas e orçamento da família",
+      "id": "p20261010-3",
+      "criado_em": "2026-10-10T06:26:23-03:00",
+      "preco_texto": "R$ 19,90",
+      "status": "pronto",
+      "plataforma": "cakto",
+      "link_compra": "https://pay.cakto.com.br/37ynph3",
+      "historico": [
+        {
+          "quando": "2026-10-10T06:26:23-03:00",
+          "evento": "aprovado por orientador + travas de código em 2 rodada(s)"
+        },
+        {
+          "quando": "2026-10-10T06:26:26-03:00",
+          "evento": "registrado na cakto por API; link recebido"
+        }
+      ]
     }
   ]
 }
